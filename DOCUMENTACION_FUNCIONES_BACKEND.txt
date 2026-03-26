@@ -1,0 +1,606 @@
+================================================================================
+                    DOCUMENTACIÓN DE FUNCIONES - BACKEND ASSETSTRACK
+                               Marzo 2026
+================================================================================
+
+Este documento describe todas las funciones y endpoints disponibles en el backend
+de AssetsTrack, organizados por controlador y servicio.
+
+================================================================================
+CONTENIDO:
+================================================================================
+1. Controlador de Usuarios (UserController)
+2. Controlador de Portfolio (PortfolioController)
+3. Controlador de Mercado (MarketController)
+4. Controlador de Gráficos (ChartController)
+5. Servicio de Usuarios (UserService)
+6. Servicio de Portfolio (PortfolioApiService)
+7. Servicio de Mercado (MarketService)
+
+================================================================================
+1. CONTROLADOR DE USUARIOS (UserController)
+================================================================================
+   Ruta Base: /api/v1/user
+
+A) POST /api/v1/user/login
+   Descripción: Autentica un usuario con credenciales de nombre de usuario y contraseña
+   Parámetros:
+   - username (String): Nombre de usuario
+   - password (String): Contraseña del usuario
+   Respuesta Exitosa (200):
+   {
+       "user": { id, username, password, baseCurrency },
+       "token": "session-{id}"
+   }
+   Respuesta Error (401):
+   { "message": "Usuario o contraseña incorrectos" }
+   
+B) GET /api/v1/user/list
+   Descripción: Obtiene la lista de todos los usuarios registrados
+   Respuesta (200): Lista de UserDTO con todos los usuarios
+
+C) GET /api/v1/user/get/{id}
+   Descripción: Obtiene la información detallada de un usuario específico
+   Parámetros:
+   - id (Long): ID del usuario
+   Respuesta (200): UserDTO con los datos del usuario
+
+D) POST /api/v1/user/create
+   Descripción: Crea un nuevo usuario (registro)
+   Body (JSON):
+   {
+       "username": "string",
+       "password": "string",
+       "baseCurrency": "string"
+   }
+   Respuesta (200): UserDTO con el nuevo usuario creado
+
+E) PUT /api/v1/user/modify/{id}
+   Descripción: Modifica los datos de un usuario existente
+   Parámetros:
+   - id (Long): ID del usuario a modificar
+   Body (JSON):
+   {
+       "username": "string",
+       "password": "string",
+       "baseCurrency": "string"
+   }
+   Respuesta (200): "User modified"
+
+F) DELETE /api/v1/user/delete/{id}
+   Descripción: Elimina un usuario del sistema
+   Parámetros:
+   - id (Long): ID del usuario a eliminar
+   Respuesta (204): Sin contenido (operación exitosa)
+
+================================================================================
+2. CONTROLADOR DE PORTFOLIO (PortfolioController)
+================================================================================
+   Ruta Base: /api/v1/portfolio
+
+A) GET /api/v1/portfolio/dashboard/{id}
+   Descripción: Obtiene el estado general del portfolio del usuario
+   Parámetros:
+   - id (Long): ID del usuario
+   Respuesta (200): Map con información del estado del portfolio
+   - Datos de posiciones actuales
+   - Valor total del portfolio
+
+B) GET /api/v1/portfolio/stock/{ticker}
+   Descripción: Obtiene los detalles completos de una acción específica
+   Parámetros:
+   - ticker (String): Símbolo bursátil (ej: AAPL, MSFT)
+   Respuesta (200): StockFullDTO con información detallada de la acción
+
+C) POST /api/v1/portfolio/add
+   Descripción: Añade una nueva posición al portfolio del usuario
+   Body (JSON):
+   {
+       "ticker": "string",
+       "companyName": "string",
+       "shares": number,
+       "avgPrice": number
+   }
+   Respuesta (200): "Position added" o "The position has already been added."
+   Nota: El id del usuario se obtiene automáticamente (actualmente hardcodeado como 1)
+
+D) PUT /api/v1/portfolio/modify
+   Descripción: Modifica una posición existente en el portfolio
+   Body (JSON):
+   {
+       "ticker": "string",
+       "companyName": "string",
+       "shares": number,
+       "avgPrice": number
+   }
+   Respuesta (200): "The position has been modified." o "Error modifying the position"
+
+E) DELETE /api/v1/portfolio/delete
+   Descripción: Elimina una posición del portfolio del usuario
+   Body (JSON):
+   {
+       "ticker": "string",
+       "companyName": "string"
+   }
+   Respuesta (200): "The position has been deleted." o "Error deleting the position"
+
+F) PUT /api/v1/portfolio/holdings/{id}/manual-update
+   Descripción: Actualiza manualmente los datos de una posición existente
+   Parámetros:
+   - id (Long): ID de la posición (holding)
+   Body (JSON):
+   {
+       "totalShares": number,
+       "avgPrice": number
+   }
+   Respuesta (200): "entity"
+   Funcionalidad: Sincroniza manualmente el número de acciones y precio promedio,
+                  creando una transacción de sincronización en la base de datos
+
+G) GET /api/v1/portfolio/{id}/graph
+   Descripción: Obtiene los datos gráficos del portfolio para visualización
+   Parámetros:
+   - id (Long): ID del usuario
+   - mode (String, opcional): "historic" (default) o "intraday"
+   - period (String, opcional): "1d" (default), "5d", "1mo", etc.
+   Respuesta (200): Lista de PortfolioPointDTO con datos históricos o intraday
+   
+   Modos:
+   - historic: Datos históricos del portfolio desde la primera transacción hasta hoy
+   - intraday: Datos del día actual a intervalos
+
+================================================================================
+3. CONTROLADOR DE MERCADO (MarketController)
+================================================================================
+   Ruta Base: /api/v1/market
+
+A) GET /api/v1/market/search
+   Descripción: Busca acciones en el mercado por nombre o símbolo
+   Parámetros:
+   - query (String): Término de búsqueda (ej: "Apple", "AAPL")
+   Respuesta (200): Lista de TickerSearchDTO con resultados de búsqueda
+   
+   Ejemplo de respuesta:
+   [
+       {
+           "ticker": "AAPL",
+           "companyName": "Apple Inc.",
+           "exchange": "NASDAQ"
+       }
+   ]
+
+B) GET /api/v1/market/watchlist/{id}
+   Descripción: Obtiene la lista de acciones seguidas por el usuario
+   Parámetros:
+   - id (Long): ID del usuario
+   Respuesta (200): Lista de WatchlistDTO con las acciones en la lista de seguimiento
+   
+   Campos retornados:
+   - id: Identificador de la entrada
+   - userId: ID del usuario propietario
+   - ticker: Símbolo de la acción
+   - companyName: Nombre de la empresa
+
+C) POST /api/v1/market/watchlist/add
+   Descripción: Añade una acción a la lista de seguimiento del usuario
+   Body (JSON):
+   {
+       "userId": number,
+       "ticker": "string",
+       "companyName": "string"
+   }
+   Respuesta (200): WatchlistDTO con la nueva entrada creada
+
+D) DELETE /api/v1/market/watchlist/delete
+   Descripción: Elimina una acción de la lista de seguimiento del usuario
+   Body (JSON):
+   {
+       "id": number,
+       "userId": number,
+       "ticker": "string",
+       "companyName": "string"
+   }
+   Respuesta (200): "{companyName} deleted from watchlist"
+
+================================================================================
+4. CONTROLADOR DE GRÁFICOS (ChartController)
+================================================================================
+   Ruta Base: /api/v1/chart
+
+A) GET /api/v1/chart/{ticker}
+   Descripción: Obtiene los datos gráficos completos de una acción específica
+   Parámetros:
+   - ticker (String): Símbolo bursátil de la acción
+   - period (String, opcional): Período de tiempo ("1mo" por defecto)
+                                Valores posibles: "1d", "5d", "1mo", "3mo", "6mo", "1y"
+   Respuesta (200): ChartDTO con los datos históricos de precio
+   
+   Datos incluidos:
+   - Precios de apertura, cierre, máximo y mínimo
+   - Volumen de transacciones
+   - Fechas y horas
+   - Indicadores técnicos (si están disponibles)
+
+================================================================================
+5. SERVICIO DE USUARIOS (UserService)
+================================================================================
+   Implementa: IUserService
+
+A) getUsers(): List<UserDTO>
+   Descripción: Recupera todos los usuarios del sistema
+   Implementación: SELECT * FROM users; Convierte cada entidad Usuario a UserDTO
+   Retorna: Lista vacía si no hay usuarios
+
+B) getUser(Long id): UserDTO
+   Descripción: Obtiene un usuario específico por su ID
+   Parámetros: id - Identificador único del usuario
+   Excepciones: RuntimeException si el usuario no existe
+   Retorna: UserDTO del usuario solicitado
+
+C) createUser(UserDTO userDto): UserDTO
+   Descripción: Crea un nuevo usuario en el sistema
+   Parámetros: userDto - Datos del nuevo usuario
+   Proceso:
+   1. Establece el ID a null (para que se genere automáticamente)
+   2. Crea una entidad Usuario con los datos proporcionados
+   3. Guarda en la base de datos
+   4. Convierte y retorna como UserDTO
+   Retorna: UserDTO del usuario creado con su nuevo ID
+
+D) modifyUser(Long id, UserDTO userDto): UserDTO
+   Descripción: Modifica los datos de un usuario existente
+   Parámetros: 
+   - id - ID del usuario a modificar
+   - userDto - Nuevos datos del usuario
+   Campos actualizables: username, password, baseCurrency
+   Excepciones: NotFoundException si el usuario no existe
+   Retorna: UserDTO con los datos actualizados
+
+E) deleteUser(long id): void
+   Descripción: Elimina un usuario del sistema
+   Parámetros: id - ID del usuario a eliminar
+   Excepciones: NotFoundException si el usuario no existe
+   Nota: La eliminación puede estar condicionada por restricciones de BD
+         (ej: si hay holdings asociados)
+
+================================================================================
+6. SERVICIO DE PORTFOLIO (PortfolioApiService)
+================================================================================
+   Implementa: IPortfolioApiService
+   Comunicación: Se conecta con un servicio Python via WebClient
+
+A) getPortfolioStatus(Long id): Map<String, Object>
+   Descripción: Calcula el estado actual del portfolio del usuario
+   Parámetros: id - ID del usuario
+   Proceso:
+   1. Obtiene todas las posiciones (holdings) del usuario
+   2. Convierte a DTOs
+   3. Envía los datos a un servicio Python en /api/v1/portfolio/status
+   4. El servicio Python calcula: valor total, ganancias/pérdidas, porcentajes
+   Retorna: Map con información del estado completo del portfolio
+   Datos incluidos:
+   - Valor total actual
+   - Costo total invertido
+   - Ganancias/Pérdidas (P&L)
+   - Porcentaje de ganancia
+   - Posiciones por acción
+
+B) getFullStockDetails(String ticker): StockFullDTO
+   Descripción: Obtiene información completa de una acción
+   Parámetros: ticker - Símbolo bursátil
+   Conexión: Llama a /api/v1/stock/{ticker}/full en servicio Python
+   Retorna: StockFullDTO con:
+   - Nombre de la empresa
+   - Precio actual
+   - Información de mercado
+   - Datos históricos
+   - Ratios financieros
+
+C) getFullChart(String ticker, String period): ChartDTO
+   Descripción: Obtiene datos gráficos de una acción para visualización
+   Parámetros:
+   - ticker - Símbolo bursátil
+   - period - Período de tiempo (1d, 5d, 1mo, 3mo, 6mo, 1y)
+   Retorna: ChartDTO con serie de precios para el período especificado
+
+D) addPosition(StockPositionDTO position, Long userId): String
+   Descripción: Añade una nueva posición al portfolio del usuario
+   Parámetros: 
+   - position - Datos de la nueva posición
+   - userId - ID del usuario propietario
+   Proceso:
+   1. Verifica que el usuario existe
+   2. Obtiene todas sus posiciones actuales
+   3. Valida que no exista duplicada (mismo ticker)
+   4. Crea nueva entidad Holding
+   5. Guarda en la base de datos
+   Retorna: "Position added" o "The position has already been added."
+   Validaciones: No permite duplicate tickers
+
+E) modifyPosition(StockPositionDTO position, Long userId): String
+   Descripción: Modifica una posición existente
+   Parámetros:
+   - position - Datos actualizados
+   - userId - ID del usuario
+   Campos modificables:
+   - Número de acciones (shares)
+   - Precio promedio (avgPrice)
+   Retorna: "The position has been modified." o mensaje de error
+   Nota: Busca la posición por ticker y la actualiza
+
+F) deletePosition(StockPositionDTO position, Long userId): String
+   Descripción: Elimina una posición del portfolio
+   Parámetros:
+   - position - Identificadores de la posición
+   - userId - ID del usuario
+   Proceso:
+   1. Busca la posición por ticker
+   2. Verifica que pertenece al usuario
+   3. Elimina la posición y todas sus transacciones asociadas
+   Retorna: "The position has been deleted." o mensaje de error
+
+G) syncHoldingManually(Long holdingId, BigDecimal targetShares, BigDecimal targetAvgPrice): HoldingDTO
+   Descripción: Sincroniza manualmente una posición con nuevos valores
+   Parámetros:
+   - holdingId - ID de la posición
+   - targetShares - Número de acciones objetivo
+   - targetAvgPrice - Precio promedio objetivo
+   Proceso:
+   1. Obtiene la posición actual
+   2. Calcula la diferencia de acciones
+   3. Crea una transacción de sincronización tipo "SYNC"
+   4. Actualiza la posición con los nuevos valores
+   Transacción creada:
+   - Tipo: "SYNC"
+   - Shares: diferencia entre objetivo y actual
+   - Price: precio promedio objetivo
+   - Fecha: 2025-02-20 (fija en el código)
+   Retorna: HoldingDTO actualizado
+
+H) getPortfolioHistory(Long userId): List<PortfolioPointDTO>
+   Descripción: Obtiene el historial completo del valor del portfolio
+   Parámetros: userId - ID del usuario
+   Proceso:
+   1. Obtiene todas las transacciones del usuario ordenadas por fecha
+   2. Extrae los tickers únicos
+   3. Obtiene precios históricos del servicio Python
+   4. Itera por cada día desde la primera transacción hasta hoy
+   5. Calcula el valor de mercado diario basado en:
+      - Acciones acumuladas de cada posición
+      - Precios de cierre del día
+   6. Retorna puntos solo si hay mercado abierto o hubo transacción
+   Retorna: Lista de PortfolioPointDTO con:
+   - Fecha
+   - Valor de mercado del portfolio
+   - Costo total invertido
+   Nota: Los puntos se optimizan para no repetir valores iguales
+
+I) getTodayIntraday(Long userId, String period): List<PortfolioPointDTO>
+   Descripción: Obtiene datos intraday (dentro del día) del portfolio
+   Parámetros:
+   - userId - ID del usuario
+   - period - Intervalo de tiempo (1m, 5m, 15m, 30m, 1h)
+   Proceso:
+   1. Obtiene todas las posiciones del usuario
+   2. Solicita precios intraday del servicio Python
+   3. Convierte precios USD a EUR usando tasa de cambio
+   4. Calcula el valor del portfolio en cada timestamp
+   5. Crea puntos gráficos para cada momento
+   Retorna: Lista de PortfolioPointDTO con datos de hoy a intervalos
+   Nota: Se usa una tasa de conversión por defecto de 0.92 si no se obtiene
+
+J) fetchPricesFromPython(String tickers, LocalDate startDate): Map<String, Map<String, Double>>
+   Descripción: Interno - Obtiene precios históricos desde servicio Python
+   Parámetros:
+   - tickers - Símbolos a consultar (separados por coma)
+   - startDate - Fecha inicial del histórico
+   Conexión: GET /api/v1/portfolio/history?tickers=XXX&start_date=YYYY-MM-DD
+   Retorna: Estructura anidada {ticker -> {fecha -> precio}}
+   Manejo de errores: Retorna Map vacío si falla la conexión
+
+K) fetchFromPython(String tickers, String period): Map<String, Object>
+   Descripción: Interno - Obtiene datos intraday desde servicio Python
+   Parámetros:
+   - tickers - Símbolos a consultar
+   - period - Período intraday (1m, 5m, etc.)
+   Conexión: GET /api/v1/portfolio/history?tickers=XXX&period=Xm
+   Retorna: Map con:
+   - "prices": {ticker -> {timestamp -> precio_USD}}
+   - "rate": Tasa de cambio USD a EUR
+   Manejo de errores: Retorna null si falla la conexión
+
+================================================================================
+7. SERVICIO DE MERCADO (MarketService)
+================================================================================
+   Implementa: IMarketService
+   Comunicación: Se conecta con un servicio Python via WebClient
+
+A) searchTicker(String query): List<TickerSearchDTO>
+   Descripción: Busca acciones en el mercado
+   Parámetros: query - Término de búsqueda (nombre o símbolo)
+   Conexión: GET /api/v1/market/search?query=XXX en servicio Python
+   Proceso:
+   1. Envía la búsqueda al servicio Python
+   2. Recibe flux de resultados
+   3. Colecciona en lista
+   Retorna: Lista de TickerSearchDTO con resultados
+   Ejemplo de resultado:
+   {
+       "ticker": "AAPL",
+       "companyName": "Apple Inc.",
+       "exchange": "NASDAQ"
+   }
+
+B) getWatchlist(Long id): List<WatchlistDTO>
+   Descripción: Obtiene la lista de seguimiento del usuario
+   Parámetros: id - ID del usuario
+   Base de datos: Busca en tabla Watchlist donde userId = id
+   Retorna: Lista de WatchlistDTO con todas las acciones seguidas
+   Campos retornados:
+   - id: Identificador único de la entrada
+   - userId: ID del usuario
+   - ticker: Símbolo bursátil
+   - companyName: Nombre de la empresa
+
+C) addToWatchlist(WatchlistDTO watchlist): WatchlistDTO
+   Descripción: Añade una acción a la lista de seguimiento
+   Parámetros: watchlist - Datos de la nueva entrada
+   - userId: ID del usuario propietario
+   - ticker: Símbolo bursátil
+   - companyName: Nombre de la empresa
+   Proceso:
+   1. Verifica que el usuario existe
+   2. Crea nueva entidad Watchlist
+   3. Asocia al usuario
+   4. Guarda en base de datos
+   Retorna: WatchlistDTO con la nueva entrada creada
+   Excepciones: RuntimeException si el usuario no existe
+
+D) deleteWatchlist(WatchlistDTO watchlist): void
+   Descripción: Elimina una acción de la lista de seguimiento
+   Parámetros: watchlist - Identificadores de la entrada
+   - id: ID de la entrada watchlist
+   Proceso:
+   1. Busca la entrada por ID
+   2. Elimina de la base de datos
+   Excepciones: RuntimeException si no encuentra la entrada
+
+================================================================================
+MODELOS DE DATOS (DTOs Y Entidades)
+================================================================================
+
+UserDTO:
+- id: Long
+- username: String
+- password: String
+- baseCurrency: String (moneda base del usuario: EUR, USD, etc.)
+
+StockPositionDTO:
+- ticker: String
+- companyName: String
+- shares: BigDecimal (número de acciones)
+- avgPrice: BigDecimal (precio promedio de compra)
+
+HoldingDTO:
+- id: Long
+- userId: Long
+- ticker: String
+- companyName: String
+- totalShares: BigDecimal
+- avgPrice: BigDecimal
+- nativeCurrency: String
+
+PortfolioPointDTO:
+- date: String (formato YYYY-MM-DD)
+- marketValue: BigDecimal (valor actual de mercado)
+- investedCost: BigDecimal (costo total invertido)
+
+StockFullDTO:
+- ticker: String
+- companyName: String
+- currentPrice: BigDecimal
+- currency: String
+- exchange: String
+- sector: String
+- industria: String
+- marketCap: BigDecimal
+
+ChartDTO:
+- ticker: String
+- period: String
+- prices: List<PricePoint>
+- timestamps: List<String>
+- volume: List<Long>
+
+TickerSearchDTO:
+- ticker: String
+- companyName: String
+- exchange: String
+
+WatchlistDTO:
+- id: Long
+- userId: Long
+- ticker: String
+- companyName: String
+
+ManualUpdateDTO:
+- totalShares: BigDecimal
+- avgPrice: BigDecimal
+
+================================================================================
+CONFIGURACIÓN IMPORTANTE
+================================================================================
+
+1. CORS (Cross-Origin Resource Sharing):
+   - Configurado en CorsConfig.java
+   - Permite solicitudes desde el frontend en React
+   
+2. WebClient:
+   - Configurado en WebClientConfig.java
+   - Conecta con servicio Python en http://localhost:5000
+   - Maneja llamadas asincrónicas a APIs externas
+
+3. Base de Datos:
+   - H2 Database (para desarrollo)
+   - Datos iniciales en import.sql
+   - JPA/Hibernate para mapeo objeto-relacional
+
+4. Puerto:
+   - Backend ejecutándose en: http://localhost:8080
+   - Servicios Python en: http://localhost:5000
+
+================================================================================
+FLUJOS DE TRABAJO TÍPICOS
+================================================================================
+
+FLUJO 1: Registro e Inicio de Sesión
+1. POST /api/v1/user/create → Registra nuevo usuario
+2. POST /api/v1/user/login → Autentica usuario
+3. Recibe token de sesión para operaciones posteriores
+
+FLUJO 2: Añadir Posición al Portfolio
+1. GET /api/v1/portfolio/stock/{ticker} → Obtiene datos de la acción
+2. POST /api/v1/portfolio/add → Añade la posición
+3. GET /api/v1/portfolio/dashboard/{id} → Visualiza dashboard actualizado
+
+FLUJO 3: Seguimiento de Mercado
+1. GET /api/v1/market/search?query=XXX → Busca acciones
+2. POST /api/v1/market/watchlist/add → Añade a lista de seguimiento
+3. GET /api/v1/market/watchlist/{id} → Ve acciones seguidas
+
+FLUJO 4: Visualización de Gráficos
+1. GET /api/v1/portfolio/{id}/graph?mode=historic → Obtiene histórico
+2. GET /api/v1/chart/{ticker}?period=1mo → Obtiene gráfico de acción
+3. Frontend renderiza los datos en componentes gráficos
+
+================================================================================
+CONSIDERACIONES DE DESARROLLO
+================================================================================
+
+1. Validaciones:
+   - Verificar que los usuarios existan antes de operaciones
+   - Evitar duplicados en posiciones (mismo ticker)
+   - Validar que los datos numéricos sean positivos
+
+2. Transacciones:
+   - Anotar con @Transactional para operaciones múltiples
+   - Manejar excepciones de base de datos apropiadamente
+
+3. Manejo de Errores:
+   - Excepciones personalizadas (NotFoundException)
+   - Respuestas HTTP adecuadas (400, 401, 404, 500)
+
+4. Rendimiento:
+   - Usar índices en base de datos para userId y ticker
+   - Cachear datos que no cambian frecuentemente
+   - Limitar resultados grandes de búsquedas
+
+5. Seguridad:
+   - TODO: Implementar autenticación real (JWT recomendado)
+   - Validar tokens en cada endpoint
+   - Encriptar contraseñas en base de datos
+   - Implementar roles y permisos
+
+================================================================================
+FIN DE LA DOCUMENTACIÓN
+================================================================================
