@@ -1,5 +1,7 @@
 package com.assetstrack.backend.controller;
 
+import java.util.concurrent.CompletableFuture;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -24,7 +26,7 @@ public class ChartController {
     }
 
     @GetMapping("/{ticker}")
-    public ChartDTO getChart(
+    public CompletableFuture<ChartDTO> getChart(
         @PathVariable String ticker,
         @RequestParam(name = "period", defaultValue = "1mo")String period
     ) {

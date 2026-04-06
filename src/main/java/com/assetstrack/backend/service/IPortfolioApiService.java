@@ -3,6 +3,7 @@ package com.assetstrack.backend.service;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 import com.assetstrack.backend.model.dto.ChartDTO;
 import com.assetstrack.backend.model.dto.HoldingDTO;
@@ -16,7 +17,7 @@ public interface IPortfolioApiService {
 
     StockFullDTO getFullStockDetails(String ticker);
 
-    ChartDTO getFullChart(String ticker, String period);
+    CompletableFuture<ChartDTO> getFullChart(String ticker, String period);
 
     String addPosition(StockPositionDTO position,Long userId);
 

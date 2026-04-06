@@ -6,11 +6,12 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeSet;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -70,15 +71,16 @@ public class PortfolioApiService implements IPortfolioApiService {
     }
 
     @Override
-    public ChartDTO getFullChart(String ticker, String period){
+    @Async
+    public CompletableFuture<ChartDTO> getFullChart(String ticker, String period){
         return webClient.get()
                 .uri(uriBuilder -> uriBuilder
                     .path("/api/v1/stock/{ticker}/chart")
-                    .queryParam("period", period) // Esto añade el ?period=...
+                    .queryParam("period", period)
                     .build(ticker))
                 .retrieve()
                 .bodyToMono(ChartDTO.class)
-                .block();
+                .toFuture();
     }
 
     public String addPosition(StockPositionDTO position,Long userId){
