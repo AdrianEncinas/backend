@@ -2,42 +2,34 @@ package com.assetstrack.backend.controller;
 
 import java.util.List;
 import java.util.Map;
-import java.util.HashMap;
-import org.springframework.beans.factory.annotation.Autowired;
+
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.assetstrack.backend.model.dto.UserDTO;
 import com.assetstrack.backend.service.IUserService;
 
 @RestController
 @RequestMapping("/api/v1/user")
-// Importante: No pongas @CrossOrigin aquí si ya tienes el CorsConfig que hicimos antes
 public class UserController {
 
-    @Autowired
     IUserService userService;
 
-    // --- NUEVO: MÉTODO DE LOGIN ---
+    public UserController(IUserService userService) {
+        this.userService = userService;
+    }
+
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Map<String, String> credentials) {
-        String username = credentials.get("username");
-        String password = credentials.get("password");
-
-        // Buscamos al usuario (esto es lo que generaba tu log de Hibernate)
-        UserDTO user = userService.getUsers().stream()
-                .filter(u -> u.getUsername().equals(username) && u.getPassword().equals(password))
-                .findFirst()
-                .orElse(null);
-
-        if (user != null) {
-            // Creamos la respuesta que espera tu AuthContext.tsx de React
-            Map<String, Object> response = new HashMap<>();
-            response.put("user", user);
-            response.put("token", "session-" + user.getId()); // Token temporal
-            return ResponseEntity.ok(response);
-        } else {
-            return ResponseEntity.status(401).body(Map.of("message", "Usuario o contraseña incorrectos"));
-        }
+        userService.login(credentials);
+        return ResponseEntity.ok("Login successful");
     }
 
     @GetMapping("/list")
@@ -46,7 +38,7 @@ public class UserController {
     }
 
     @GetMapping("/get/{id}")
-    public UserDTO getMethodName(@PathVariable Long id) {
+    public UserDTO getUserById(@PathVariable Long id) {
         return userService.getUser(id);
     }
 

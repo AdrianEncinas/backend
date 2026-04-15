@@ -1,8 +1,11 @@
 package com.assetstrack.backend.service;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import com.assetstrack.backend.exception.NotFoundException;
@@ -14,8 +17,11 @@ import com.assetstrack.backend.repository.UserRepository;
 @Service
 public class UserService implements IUserService{
 
-    @Autowired
-    UserRepository userRepo;
+    private final UserRepository userRepo;
+
+    public UserService(UserRepository userRepo) {
+        this.userRepo = userRepo;
+    }
 
     @Override
     public List<UserDTO> getUsers() {
@@ -57,6 +63,26 @@ public class UserService implements IUserService{
         User user = userRepo.findById(id)
             .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
         userRepo.delete(user);
+    }
+
+    @Override
+    public Map<String, String> login(Map<String, String> credentials) {
+        String username = credentials.get("username");
+        String password = credentials.get("password");
+
+        UserDTO user = getUsers().stream()
+                .filter(u -> u.getUsername().equals(username) && u.getPassword().equals(password))
+                .findFirst()
+                .orElse(null);
+
+        if (user != null) {
+            Map<String, String> response = new HashMap<>();
+            response.put("user", user.toString());
+            response.put("token", "session-" + user.getId()); // Token temporal
+            return response;
+        } else {
+            throw new NotFoundException("User or password incorrect");
+        }
     }
 
 }

@@ -19,14 +19,14 @@ public class MarketService implements IMarketService{
 
     private final WebClient webClient;
 
-    @Autowired
     private WatchlistRepository watchlistRepo;
 
-    @Autowired
     private UserRepository userRepository;
 
-    public MarketService(WebClient webClient) {
+    public MarketService(WebClient webClient, WatchlistRepository watchlistRepo, UserRepository userRepository) {
         this.webClient = webClient;
+        this.watchlistRepo = watchlistRepo;
+        this.userRepository = userRepository;
     }
 
     @Override

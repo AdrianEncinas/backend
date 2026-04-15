@@ -2,7 +2,6 @@ package com.assetstrack.backend.controller;
 
 import java.util.concurrent.CompletableFuture;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -18,7 +17,6 @@ import com.assetstrack.backend.service.PortfolioApiService;
 @RequestMapping("/api/v1/chart")
 public class ChartController {
 
-    @Autowired
     private final IPortfolioApiService portfolioApiService;
 
     public ChartController(PortfolioApiService portfolioApiService){

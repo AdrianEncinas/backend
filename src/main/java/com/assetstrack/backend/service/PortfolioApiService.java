@@ -9,7 +9,6 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -34,19 +33,16 @@ import com.assetstrack.backend.repository.UserRepository;
 @Service
 public class PortfolioApiService implements IPortfolioApiService {
 
-    private final WebClient webClient;
+    private WebClient webClient;
+    private HoldingRepository holdingRepo;
+    private UserRepository userRepo;
+    private TransactionRepository transactionRepo;
 
-    @Autowired
-    HoldingRepository holdingRepo;
-
-    @Autowired
-    UserRepository userRepo;
-
-    @Autowired
-    TransactionRepository transactionRepo;
-
-    public PortfolioApiService(WebClient webClient) {
+    public PortfolioApiService(WebClient webClient, HoldingRepository holdingRepo, UserRepository userRepo, TransactionRepository transactionRepo) {
         this.webClient = webClient;
+        this.holdingRepo = holdingRepo;
+        this.userRepo = userRepo;
+        this.transactionRepo = transactionRepo;
     }
 
     @Override
