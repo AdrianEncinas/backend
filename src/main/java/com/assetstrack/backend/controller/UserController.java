@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -13,11 +14,16 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.assetstrack.backend.model.dto.LoginRequest;
 import com.assetstrack.backend.model.dto.UserDTO;
+import com.assetstrack.backend.model.dto.UserResponse;
 import com.assetstrack.backend.service.IUserService;
+
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/user")
+@Validated
 public class UserController {
 
     IUserService userService;
@@ -27,34 +33,33 @@ public class UserController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody Map<String, String> credentials) {
-        userService.login(credentials);
-        return ResponseEntity.ok("Login successful");
+    public ResponseEntity<Map<String, String>> login(@Valid @RequestBody LoginRequest loginRequest) {
+        return ResponseEntity.ok(userService.login(loginRequest));
     }
 
     @GetMapping("/list")
-    public List<UserDTO> getListUsers() {
+    public List<UserResponse> getListUsers() {
         return userService.getUsers();
     }
 
     @GetMapping("/get/{id}")
-    public UserDTO getUserById(@PathVariable Long id) {
+    public UserResponse getUserById(@PathVariable Long id) {
         return userService.getUser(id);
     }
 
-    @PostMapping("/create") // Este servirá como tu "Register"
-    public UserDTO createUser(@RequestBody UserDTO userDto) {
+    @PostMapping("/create")
+    public UserResponse createUser(@Valid @RequestBody UserDTO userDto) {
         return userService.createUser(userDto);
     }
 
     @PutMapping("/modify/{id}")
-    public ResponseEntity<String> modifyUser(@PathVariable Long id, @RequestBody UserDTO userDto) {
+    public ResponseEntity<String> modifyUser(@PathVariable Long id, @Valid @RequestBody UserDTO userDto) {
         userService.modifyUser(id, userDto);
         return ResponseEntity.ok("User modified");
     }
 
     @DeleteMapping("/delete/{id}")
-    public ResponseEntity<?> deleteUser(@PathVariable Long id) {
+    public ResponseEntity<String> deleteUser(@PathVariable Long id) {
         userService.deleteUser(id);
         return ResponseEntity.noContent().build();
     }

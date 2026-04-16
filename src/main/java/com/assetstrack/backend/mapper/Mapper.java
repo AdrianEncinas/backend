@@ -2,6 +2,7 @@ package com.assetstrack.backend.mapper;
 
 import com.assetstrack.backend.model.dto.HoldingDTO;
 import com.assetstrack.backend.model.dto.UserDTO;
+import com.assetstrack.backend.model.dto.UserResponse;
 import com.assetstrack.backend.model.dto.WatchlistDTO;
 import com.assetstrack.backend.model.entity.Holding;
 import com.assetstrack.backend.model.entity.User;
@@ -30,6 +31,16 @@ public class Mapper {
                 .id(u.getId())
                 .username(u.getUsername())
                 .password(u.getPassword())
+                .baseCurrency(u.getBaseCurrency())
+                .build();
+    }
+
+    public static UserResponse toResponse(User u){
+        if (u == null) return null;
+
+        return UserResponse.builder()
+                .id(u.getId())
+                .username(u.getUsername())
                 .baseCurrency(u.getBaseCurrency())
                 .build();
     }

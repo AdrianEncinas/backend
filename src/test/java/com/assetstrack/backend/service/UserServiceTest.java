@@ -10,6 +10,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.HashMap;
 import java.util.List;
@@ -25,6 +26,9 @@ class UserServiceTest {
 
     @Mock
     private UserRepository userRepo;
+
+    @Mock
+    private PasswordEncoder passwordEncoder;
 
     @InjectMocks
     private UserService userService;
@@ -110,6 +114,7 @@ class UserServiceTest {
                 .baseCurrency("EUR")
                 .build();
 
+        when(passwordEncoder.encode(any(CharSequence.class))).thenReturn("pass");
         when(userRepo.save(any(User.class))).thenReturn(savedEntity);
 
         UserDTO result = userService.createUser(input);

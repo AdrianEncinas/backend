@@ -4,13 +4,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.assetstrack.backend.config.JwtUtil;
 import com.assetstrack.backend.exception.NotFoundException;
 import com.assetstrack.backend.mapper.Mapper;
+import com.assetstrack.backend.model.dto.LoginRequest;
 import com.assetstrack.backend.model.dto.UserDTO;
+import com.assetstrack.backend.model.dto.UserResponse;
 import com.assetstrack.backend.model.entity.User;
 import com.assetstrack.backend.repository.UserRepository;
 
@@ -18,71 +22,71 @@ import com.assetstrack.backend.repository.UserRepository;
 public class UserService implements IUserService{
 
     private final UserRepository userRepo;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
+    private final AuthenticationManager authenticationManager;
 
-    public UserService(UserRepository userRepo) {
+    public UserService(UserRepository userRepo, PasswordEncoder passwordEncoder,
+                       JwtUtil jwtUtil, AuthenticationManager authenticationManager) {
         this.userRepo = userRepo;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtUtil = jwtUtil;
+        this.authenticationManager = authenticationManager;
     }
 
     @Override
-    public List<UserDTO> getUsers() {
-        return(userRepo.findAll().stream().map(Mapper::toDTO).toList());
+    public List<UserResponse> getUsers() {
+        return userRepo.findAll().stream().map(Mapper::toResponse).toList();
     }
 
     @Override
-    public UserDTO getUser(Long id){
-        UserDTO user = userRepo.findById(id).map(Mapper::toDTO)
-            .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
-        return user;
+    public UserResponse getUser(Long id){
+        return userRepo.findById(id).map(Mapper::toResponse)
+            .orElseThrow(() -> new NotFoundException("User not found with id: " + id));
     }
 
     @Override
-    public UserDTO createUser(UserDTO userDto) {
+    public UserResponse createUser(UserDTO userDto) {
         userDto.setId(null);
         User user = User.builder()
             .username(userDto.getUsername())
-            .password(userDto.getPassword())
+            .password(passwordEncoder.encode(userDto.getPassword()))
             .baseCurrency(userDto.getBaseCurrency())
             .build();
-        return Mapper.toDTO(userRepo.save(user));
+        return Mapper.toResponse(userRepo.save(user));
     }
 
     @Override
-    public UserDTO modifyUser(Long id, UserDTO userDto) {
+    public UserResponse modifyUser(Long id, UserDTO userDto) {
         User user = userRepo.findById(id)
-            .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
+            .orElseThrow(() -> new NotFoundException("User not found with id: " + id));
 
         user.setUsername(userDto.getUsername());
-        user.setPassword(userDto.getPassword());
+        user.setPassword(passwordEncoder.encode(userDto.getPassword()));
         user.setBaseCurrency(userDto.getBaseCurrency());
         
-        return Mapper.toDTO(userRepo.save(user));
+        return Mapper.toResponse(userRepo.save(user));
     }
 
     @Override
     public void deleteUser(long id) {
         User user = userRepo.findById(id)
-            .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
+            .orElseThrow(() -> new NotFoundException("User not found"));
         userRepo.delete(user);
     }
 
     @Override
-    public Map<String, String> login(Map<String, String> credentials) {
-        String username = credentials.get("username");
-        String password = credentials.get("password");
+    public Map<String, String> login(LoginRequest loginRequest) {
+        authenticationManager.authenticate(
+            new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword())
+        );
 
-        UserDTO user = getUsers().stream()
-                .filter(u -> u.getUsername().equals(username) && u.getPassword().equals(password))
-                .findFirst()
-                .orElse(null);
+        String token = jwtUtil.generateToken(loginRequest.getUsername());
 
-        if (user != null) {
-            Map<String, String> response = new HashMap<>();
-            response.put("user", user.toString());
-            response.put("token", "session-" + user.getId()); // Token temporal
-            return response;
-        } else {
-            throw new NotFoundException("User or password incorrect");
-        }
+        Map<String, String> response = new HashMap<>();
+        response.put("token", token);
+        return response;
     }
 
 }
+
