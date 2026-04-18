@@ -1,5 +1,7 @@
 package com.assetstrack.backend.controller;
 
+import com.assetstrack.backend.config.JwtUtil;
+import com.assetstrack.backend.config.UserDetailsServiceImpl;
 import com.assetstrack.backend.model.dto.ManualUpdateDTO;
 import com.assetstrack.backend.model.dto.PortfolioPointDTO;
 import com.assetstrack.backend.model.dto.StockFullDTO;
@@ -12,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
@@ -32,12 +35,19 @@ class PortfolioControllerTest {
     @MockitoBean
     private PortfolioApiService portfolioApiService;
 
+    @MockitoBean
+    private JwtUtil jwtUtil;
+
+    @MockitoBean
+    private UserDetailsServiceImpl userDetailsService;
+
     @Autowired
     private ObjectMapper objectMapper;
 
     // ── GET /dashboard/{id} ───────────────────────────────────────────────────
 
     @Test
+    @WithMockUser
     void getDashboard_returnsPortfolioMap() throws Exception {
         Map<String, Object> dashboard = Map.of("totalValue", 5000.0, "holdings", List.of());
         when(portfolioApiService.getPortfolioStatus(1L)).thenReturn(dashboard);
@@ -50,6 +60,7 @@ class PortfolioControllerTest {
     // ── GET /stock/{ticker} ───────────────────────────────────────────────────
 
     @Test
+    @WithMockUser
     void getStockFull_returnStockDetails() throws Exception {
         StockFullDTO stock = new StockFullDTO(
                 "AAPL", "Apple Inc.", null, "Tech company",
@@ -66,6 +77,7 @@ class PortfolioControllerTest {
     // ── POST /add ─────────────────────────────────────────────────────────────
 
     @Test
+    @WithMockUser
     void addPosition_validBody_returns200() throws Exception {
         StockPositionDTO position = new StockPositionDTO(
                 "AAPL", "Apple Inc.", new BigDecimal("10"), new BigDecimal("150.00"), 1L);
@@ -79,6 +91,7 @@ class PortfolioControllerTest {
     }
 
     @Test
+    @WithMockUser
     void addPosition_missingUserId_returns400() throws Exception {
         StockPositionDTO position = new StockPositionDTO(
                 "AAPL", "Apple Inc.", new BigDecimal("10"), new BigDecimal("150.00"), null);
@@ -93,6 +106,7 @@ class PortfolioControllerTest {
     // ── PUT /modify ───────────────────────────────────────────────────────────
 
     @Test
+    @WithMockUser
     void modifyPosition_validBody_returns200() throws Exception {
         StockPositionDTO position = new StockPositionDTO(
                 "AAPL", "Apple Inc.", new BigDecimal("20"), new BigDecimal("155.00"), 1L);
@@ -106,6 +120,7 @@ class PortfolioControllerTest {
     }
 
     @Test
+    @WithMockUser
     void modifyPosition_missingUserId_returns400() throws Exception {
         StockPositionDTO position = new StockPositionDTO(
                 "AAPL", "Apple Inc.", new BigDecimal("20"), new BigDecimal("155.00"), null);
@@ -120,6 +135,7 @@ class PortfolioControllerTest {
     // ── DELETE /delete ────────────────────────────────────────────────────────
 
     @Test
+    @WithMockUser
     void deletePosition_validBody_returns200() throws Exception {
         StockPositionDTO position = new StockPositionDTO(
                 "AAPL", "Apple Inc.", BigDecimal.ZERO, BigDecimal.ZERO, 1L);
@@ -133,6 +149,7 @@ class PortfolioControllerTest {
     }
 
     @Test
+    @WithMockUser
     void deletePosition_missingUserId_returns400() throws Exception {
         StockPositionDTO position = new StockPositionDTO(
                 "AAPL", "Apple Inc.", BigDecimal.ZERO, BigDecimal.ZERO, null);
@@ -146,6 +163,7 @@ class PortfolioControllerTest {
     // ── PUT /holdings/{id}/manual-update ─────────────────────────────────────
 
     @Test
+    @WithMockUser
     void manualUpdate_validRequest_returnsEntity() throws Exception {
         ManualUpdateDTO dto = new ManualUpdateDTO(new BigDecimal("25"), new BigDecimal("160.00"));
         when(portfolioApiService.syncHoldingManually(eq(10L), any(), any())).thenReturn(null);
@@ -160,6 +178,7 @@ class PortfolioControllerTest {
     // ── GET /{id}/graph ───────────────────────────────────────────────────────
 
     @Test
+    @WithMockUser
     void getGraph_historicMode_returnsHistoricData() throws Exception {
         PortfolioPointDTO point = new PortfolioPointDTO(
                 "2024-01-01", new BigDecimal("5000"), new BigDecimal("4000"));
@@ -172,6 +191,7 @@ class PortfolioControllerTest {
     }
 
     @Test
+    @WithMockUser
     void getGraph_intradayMode_returnsIntradayData() throws Exception {
         PortfolioPointDTO point = new PortfolioPointDTO(
                 "10:30", new BigDecimal("5100"), new BigDecimal("4000"));

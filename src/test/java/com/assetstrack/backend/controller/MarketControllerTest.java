@@ -1,5 +1,7 @@
 package com.assetstrack.backend.controller;
 
+import com.assetstrack.backend.config.JwtUtil;
+import com.assetstrack.backend.config.UserDetailsServiceImpl;
 import com.assetstrack.backend.model.dto.TickerSearchDTO;
 import com.assetstrack.backend.model.dto.WatchlistDTO;
 import com.assetstrack.backend.service.MarketService;
@@ -9,12 +11,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -29,12 +30,19 @@ class MarketControllerTest {
     @MockitoBean
     private MarketService marketService;
 
+    @MockitoBean
+    private JwtUtil jwtUtil;
+
+    @MockitoBean
+    private UserDetailsServiceImpl userDetailsService;
+
     @Autowired
     private ObjectMapper objectMapper;
 
     // ── GET /search ───────────────────────────────────────────────────────────
 
     @Test
+    @WithMockUser
     void searchTicker_returnsResults() throws Exception {
         TickerSearchDTO dto = new TickerSearchDTO("AAPL", "Apple Inc.", "NASDAQ");
         when(marketService.searchTicker("AAPL")).thenReturn(List.of(dto));
@@ -46,6 +54,7 @@ class MarketControllerTest {
     }
 
     @Test
+    @WithMockUser
     void searchTicker_noResults_returnsEmptyArray() throws Exception {
         when(marketService.searchTicker("UNKNOWN")).thenReturn(List.of());
 
@@ -57,6 +66,7 @@ class MarketControllerTest {
     // ── GET /watchlist/{id} ───────────────────────────────────────────────────
 
     @Test
+    @WithMockUser
     void getWatchlist_returnsWatchlistForUser() throws Exception {
         WatchlistDTO dto = new WatchlistDTO(1L, 1L, "AAPL", "Apple Inc.");
         when(marketService.getWatchlist(1L)).thenReturn(List.of(dto));
@@ -70,6 +80,7 @@ class MarketControllerTest {
     // ── POST /watchlist/add ───────────────────────────────────────────────────
 
     @Test
+    @WithMockUser
     void addToWatchlist_validBody_returnsSavedDTO() throws Exception {
         WatchlistDTO input = new WatchlistDTO(null, 1L, "GOOGL", "Alphabet Inc.");
         WatchlistDTO saved = new WatchlistDTO(5L, 1L, "GOOGL", "Alphabet Inc.");
@@ -86,6 +97,7 @@ class MarketControllerTest {
     // ── DELETE /watchlist/delete ──────────────────────────────────────────────
 
     @Test
+    @WithMockUser
     void deleteWatchlist_validBody_returns200WithMessage() throws Exception {
         WatchlistDTO input = new WatchlistDTO(1L, 1L, "AAPL", "Apple Inc.");
         doNothing().when(marketService).deleteWathlist(any(WatchlistDTO.class));
@@ -98,15 +110,15 @@ class MarketControllerTest {
     }
 
     @Test
-    void deleteWatchlist_notFound_propagatesException() throws Exception {
+    @WithMockUser
+    void deleteWatchlist_notFound_returns500() throws Exception {
         WatchlistDTO input = new WatchlistDTO(99L, 1L, "AAPL", "Apple Inc.");
         doThrow(new RuntimeException("Watchlist not found"))
                 .when(marketService).deleteWathlist(any(WatchlistDTO.class));
 
-        assertThatThrownBy(() ->
-                mockMvc.perform(delete("/api/v1/market/watchlist/delete")
+        mockMvc.perform(delete("/api/v1/market/watchlist/delete")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(input))))
-                .hasMessageContaining("not found");
+                        .content(objectMapper.writeValueAsString(input)))
+                .andExpect(status().isInternalServerError());
     }
 }

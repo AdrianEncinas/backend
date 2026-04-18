@@ -1,7 +1,10 @@
 package com.assetstrack.backend.service;
 
+import com.assetstrack.backend.config.JwtUtil;
 import com.assetstrack.backend.exception.NotFoundException;
+import com.assetstrack.backend.model.dto.LoginRequest;
 import com.assetstrack.backend.model.dto.UserDTO;
+import com.assetstrack.backend.model.dto.UserResponse;
 import com.assetstrack.backend.model.entity.User;
 import com.assetstrack.backend.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -10,9 +13,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -29,6 +35,12 @@ class UserServiceTest {
 
     @Mock
     private PasswordEncoder passwordEncoder;
+
+    @Mock
+    private JwtUtil jwtUtil;
+
+    @Mock
+    private AuthenticationManager authenticationManager;
 
     @InjectMocks
     private UserService userService;
@@ -56,10 +68,10 @@ class UserServiceTest {
     // ── getUsers ──────────────────────────────────────────────────────────────
 
     @Test
-    void getUsers_returnsListOfUserDTOs() {
+    void getUsers_returnsListOfUserResponses() {
         when(userRepo.findAll()).thenReturn(List.of(userEntity));
 
-        List<UserDTO> result = userService.getUsers();
+        List<UserResponse> result = userService.getUsers();
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getUsername()).isEqualTo("johndoe");
@@ -70,7 +82,7 @@ class UserServiceTest {
     void getUsers_emptyRepository_returnsEmptyList() {
         when(userRepo.findAll()).thenReturn(List.of());
 
-        List<UserDTO> result = userService.getUsers();
+        List<UserResponse> result = userService.getUsers();
 
         assertThat(result).isEmpty();
     }
@@ -78,30 +90,30 @@ class UserServiceTest {
     // ── getUser ───────────────────────────────────────────────────────────────
 
     @Test
-    void getUser_existingId_returnsUserDTO() {
+    void getUser_existingId_returnsUserResponse() {
         when(userRepo.findById(1L)).thenReturn(Optional.of(userEntity));
 
-        UserDTO result = userService.getUser(1L);
+        UserResponse result = userService.getUser(1L);
 
         assertThat(result.getId()).isEqualTo(1L);
         assertThat(result.getUsername()).isEqualTo("johndoe");
     }
 
     @Test
-    void getUser_nonExistingId_throwsRuntimeException() {
+    void getUser_nonExistingId_throwsNotFoundException() {
         when(userRepo.findById(99L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> userService.getUser(99L))
-                .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("no encontrado");
+                .isInstanceOf(NotFoundException.class)
+                .hasMessageContaining("User not found");
     }
 
     // ── createUser ────────────────────────────────────────────────────────────
 
     @Test
-    void createUser_savesAndReturnsDTO() {
+    void createUser_savesAndReturnsResponse() {
         UserDTO input = UserDTO.builder()
-                .id(5L) // debe ser ignorado (seteado a null)
+                .id(5L)
                 .username("newuser")
                 .password("pass")
                 .baseCurrency("EUR")
@@ -110,25 +122,24 @@ class UserServiceTest {
         User savedEntity = User.builder()
                 .id(2L)
                 .username("newuser")
-                .password("pass")
+                .password("encoded_pass")
                 .baseCurrency("EUR")
                 .build();
 
-        when(passwordEncoder.encode(any(CharSequence.class))).thenReturn("pass");
+        when(passwordEncoder.encode(any(CharSequence.class))).thenReturn("encoded_pass");
         when(userRepo.save(any(User.class))).thenReturn(savedEntity);
 
-        UserDTO result = userService.createUser(input);
+        UserResponse result = userService.createUser(input);
 
         assertThat(result.getId()).isEqualTo(2L);
         assertThat(result.getUsername()).isEqualTo("newuser");
-        // El id del DTO de entrada debe haber sido nulificado antes del save
         verify(userRepo).save(any(User.class));
     }
 
     // ── modifyUser ────────────────────────────────────────────────────────────
 
     @Test
-    void modifyUser_existingId_updatesAndReturnsDTO() {
+    void modifyUser_existingId_updatesAndReturnsResponse() {
         UserDTO modifyInput = UserDTO.builder()
                 .username("modified")
                 .password("newpass")
@@ -143,9 +154,10 @@ class UserServiceTest {
                 .build();
 
         when(userRepo.findById(1L)).thenReturn(Optional.of(userEntity));
+        when(passwordEncoder.encode(any(CharSequence.class))).thenReturn("newpass");
         when(userRepo.save(any(User.class))).thenReturn(updatedEntity);
 
-        UserDTO result = userService.modifyUser(1L, modifyInput);
+        UserResponse result = userService.modifyUser(1L, modifyInput);
 
         assertThat(result.getUsername()).isEqualTo("modified");
         assertThat(result.getBaseCurrency()).isEqualTo("GBP");
@@ -158,7 +170,7 @@ class UserServiceTest {
 
         assertThatThrownBy(() -> userService.modifyUser(99L, userDTO))
                 .isInstanceOf(NotFoundException.class)
-                .hasMessageContaining("no encontrado");
+                .hasMessageContaining("User not found");
     }
 
     // ── deleteUser ────────────────────────────────────────────────────────────
@@ -178,48 +190,49 @@ class UserServiceTest {
 
         assertThatThrownBy(() -> userService.deleteUser(99L))
                 .isInstanceOf(NotFoundException.class)
-                .hasMessageContaining("no encontrado");
+                .hasMessageContaining("User not found");
     }
 
     // ── login ─────────────────────────────────────────────────────────────────
 
     @Test
-    void login_validCredentials_returnsTokenAndUser() {
-        when(userRepo.findAll()).thenReturn(List.of(userEntity));
+    void login_validCredentials_returnsToken() {
+        when(jwtUtil.generateToken("johndoe")).thenReturn("mock-jwt-token");
 
-        Map<String, String> credentials = new HashMap<>();
-        credentials.put("username", "johndoe");
-        credentials.put("password", "secret123");
+        LoginRequest loginRequest = new LoginRequest();
+        loginRequest.setUsername("johndoe");
+        loginRequest.setPassword("secret123");
 
-        Map<String, String> result = userService.login(credentials);
+        Map<String, String> result = userService.login(loginRequest);
 
         assertThat(result).containsKey("token");
-        assertThat(result).containsKey("user");
-        assertThat(result.get("token")).startsWith("session-");
+        assertThat(result.get("token")).isEqualTo("mock-jwt-token");
+        verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
     }
 
     @Test
-    void login_wrongPassword_throwsNotFoundException() {
-        when(userRepo.findAll()).thenReturn(List.of(userEntity));
+    void login_wrongCredentials_throwsBadCredentialsException() {
+        doThrow(new BadCredentialsException("Bad credentials"))
+                .when(authenticationManager).authenticate(any());
 
-        Map<String, String> credentials = new HashMap<>();
-        credentials.put("username", "johndoe");
-        credentials.put("password", "wrongpass");
+        LoginRequest loginRequest = new LoginRequest();
+        loginRequest.setUsername("johndoe");
+        loginRequest.setPassword("wrongpass");
 
-        assertThatThrownBy(() -> userService.login(credentials))
-                .isInstanceOf(NotFoundException.class)
-                .hasMessageContaining("incorrect");
+        assertThatThrownBy(() -> userService.login(loginRequest))
+                .isInstanceOf(BadCredentialsException.class);
     }
 
     @Test
-    void login_wrongUsername_throwsNotFoundException() {
-        when(userRepo.findAll()).thenReturn(List.of(userEntity));
+    void login_wrongUsername_throwsUsernameNotFoundException() {
+        doThrow(new UsernameNotFoundException("User not found"))
+                .when(authenticationManager).authenticate(any());
 
-        Map<String, String> credentials = new HashMap<>();
-        credentials.put("username", "unknown");
-        credentials.put("password", "secret123");
+        LoginRequest loginRequest = new LoginRequest();
+        loginRequest.setUsername("unknown");
+        loginRequest.setPassword("secret123");
 
-        assertThatThrownBy(() -> userService.login(credentials))
-                .isInstanceOf(NotFoundException.class);
+        assertThatThrownBy(() -> userService.login(loginRequest))
+                .isInstanceOf(UsernameNotFoundException.class);
     }
 }

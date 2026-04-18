@@ -1,7 +1,11 @@
 package com.assetstrack.backend.controller;
 
+import com.assetstrack.backend.config.JwtUtil;
+import com.assetstrack.backend.config.UserDetailsServiceImpl;
 import com.assetstrack.backend.exception.NotFoundException;
+import com.assetstrack.backend.model.dto.LoginRequest;
 import com.assetstrack.backend.model.dto.UserDTO;
+import com.assetstrack.backend.model.dto.UserResponse;
 import com.assetstrack.backend.service.IUserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -9,15 +13,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
-import com.assetstrack.backend.exception.NotFoundException;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -32,6 +33,12 @@ class UserControllerTest {
     @MockitoBean
     private IUserService userService;
 
+    @MockitoBean
+    private JwtUtil jwtUtil;
+
+    @MockitoBean
+    private UserDetailsServiceImpl userDetailsService;
+
     @Autowired
     private ObjectMapper objectMapper;
 
@@ -39,38 +46,42 @@ class UserControllerTest {
 
     @Test
     void login_validCredentials_returns200() throws Exception {
-        Map<String, String> response = Map.of("token", "session-1", "user", "johndoe");
-        when(userService.login(anyMap())).thenReturn(response);
+        Map<String, String> response = Map.of("token", "mock-jwt");
+        when(userService.login(any(LoginRequest.class))).thenReturn(response);
 
-        Map<String, String> credentials = new HashMap<>();
-        credentials.put("username", "johndoe");
-        credentials.put("password", "secret123");
+        LoginRequest credentials = new LoginRequest();
+        credentials.setUsername("johndoe");
+        credentials.setPassword("secret123");
 
         mockMvc.perform(post("/api/v1/user/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(credentials)))
                 .andExpect(status().isOk())
-                .andExpect(content().string("Login successful"));
+                .andExpect(jsonPath("$.token").value("mock-jwt"));
     }
 
     @Test
-    void login_invalidCredentials_propagatesNotFoundException() throws Exception {
-        when(userService.login(anyMap())).thenThrow(new NotFoundException("User or password incorrect"));
+    void login_invalidCredentials_returns404() throws Exception {
+        when(userService.login(any(LoginRequest.class)))
+                .thenThrow(new NotFoundException("User or password incorrect"));
 
-        Map<String, String> credentials = Map.of("username", "bad", "password", "wrong");
+        LoginRequest credentials = new LoginRequest();
+        credentials.setUsername("bad");
+        credentials.setPassword("wrong");
 
-        assertThatThrownBy(() ->
-                mockMvc.perform(post("/api/v1/user/login")
+        mockMvc.perform(post("/api/v1/user/login")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(credentials))))
-                .hasMessageContaining("incorrect");
+                        .content(objectMapper.writeValueAsString(credentials)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("User or password incorrect"));
     }
 
     // ── GET /list ─────────────────────────────────────────────────────────────
 
     @Test
+    @WithMockUser
     void getListUsers_returnsList() throws Exception {
-        UserDTO user = UserDTO.builder().id(1L).username("johndoe").build();
+        UserResponse user = UserResponse.builder().id(1L).username("johndoe").build();
         when(userService.getUsers()).thenReturn(List.of(user));
 
         mockMvc.perform(get("/api/v1/user/list"))
@@ -81,8 +92,9 @@ class UserControllerTest {
     // ── GET /get/{id} ─────────────────────────────────────────────────────────
 
     @Test
+    @WithMockUser
     void getUserById_existingId_returnsUser() throws Exception {
-        UserDTO user = UserDTO.builder().id(1L).username("johndoe").build();
+        UserResponse user = UserResponse.builder().id(1L).username("johndoe").build();
         when(userService.getUser(1L)).thenReturn(user);
 
         mockMvc.perform(get("/api/v1/user/get/1"))
@@ -92,12 +104,12 @@ class UserControllerTest {
     }
 
     @Test
-    void getUserById_nonExistingId_propagatesException() throws Exception {
+    @WithMockUser
+    void getUserById_nonExistingId_returns500() throws Exception {
         when(userService.getUser(99L)).thenThrow(new RuntimeException("Usuario no encontrado"));
 
-        assertThatThrownBy(() ->
-                mockMvc.perform(get("/api/v1/user/get/99")))
-                .hasMessageContaining("no encontrado");
+        mockMvc.perform(get("/api/v1/user/get/99"))
+                .andExpect(status().isInternalServerError());
     }
 
     // ── POST /create ──────────────────────────────────────────────────────────
@@ -105,7 +117,7 @@ class UserControllerTest {
     @Test
     void createUser_validBody_returnsCreatedUser() throws Exception {
         UserDTO input = UserDTO.builder().username("newuser").password("pass").baseCurrency("USD").build();
-        UserDTO saved = UserDTO.builder().id(2L).username("newuser").password("pass").baseCurrency("USD").build();
+        UserResponse saved = UserResponse.builder().id(2L).username("newuser").baseCurrency("USD").build();
         when(userService.createUser(any(UserDTO.class))).thenReturn(saved);
 
         mockMvc.perform(post("/api/v1/user/create")
@@ -119,10 +131,11 @@ class UserControllerTest {
     // ── PUT /modify/{id} ──────────────────────────────────────────────────────
 
     @Test
+    @WithMockUser
     void modifyUser_existingId_returns200() throws Exception {
         UserDTO input = UserDTO.builder().username("modified").password("newpass").baseCurrency("EUR").build();
         when(userService.modifyUser(eq(1L), any(UserDTO.class)))
-                .thenReturn(UserDTO.builder().id(1L).username("modified").build());
+                .thenReturn(UserResponse.builder().id(1L).username("modified").build());
 
         mockMvc.perform(put("/api/v1/user/modify/1")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -134,6 +147,7 @@ class UserControllerTest {
     // ── DELETE /delete/{id} ───────────────────────────────────────────────────
 
     @Test
+    @WithMockUser
     void deleteUser_existingId_returns204() throws Exception {
         doNothing().when(userService).deleteUser(1L);
 
@@ -142,11 +156,11 @@ class UserControllerTest {
     }
 
     @Test
-    void deleteUser_nonExistingId_propagatesNotFoundException() throws Exception {
+    @WithMockUser
+    void deleteUser_nonExistingId_returns404() throws Exception {
         doThrow(new NotFoundException("not found")).when(userService).deleteUser(99L);
 
-        assertThatThrownBy(() ->
-                mockMvc.perform(delete("/api/v1/user/delete/99")))
-                .hasMessageContaining("not found");
+        mockMvc.perform(delete("/api/v1/user/delete/99"))
+                .andExpect(status().isNotFound());
     }
 }
