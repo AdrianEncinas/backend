@@ -48,6 +48,9 @@ public class UserService implements IUserService{
     @Override
     public UserResponse createUser(UserDTO userDto) {
         userDto.setId(null);
+        userRepo.findByUsername(userDto.getUsername()).ifPresent(u -> {
+            throw new IllegalArgumentException("Username already exists");
+        });
         User user = User.builder()
             .username(userDto.getUsername())
             .password(passwordEncoder.encode(userDto.getPassword()))
@@ -60,6 +63,12 @@ public class UserService implements IUserService{
     public UserResponse modifyUser(Long id, UserDTO userDto) {
         User user = userRepo.findById(id)
             .orElseThrow(() -> new NotFoundException("User not found with id: " + id));
+
+        userRepo.findByUsername(userDto.getUsername()).ifPresent(u -> {
+            if (!u.getId().equals(id)) {
+                throw new IllegalArgumentException("Username already exists");
+            }
+        });
 
         user.setUsername(userDto.getUsername());
         user.setPassword(passwordEncoder.encode(userDto.getPassword()));

@@ -43,32 +43,32 @@ public class PortfolioController{
         return portfolioApiService.getFullStockDetails(ticker);
     }
 
-    @PostMapping("/add")
-    public ResponseEntity<String> addPosition(@RequestBody StockPositionDTO position) {
-        if (position.userid() == null) {
-            return ResponseEntity.badRequest().body("userid es requerido");
+    @PostMapping("/add/{id}")
+    public ResponseEntity<String> addPosition(@PathVariable Long id, @RequestBody StockPositionDTO position) {
+        if (id == null) {
+            return ResponseEntity.badRequest().body("userid is required");
         }
-        return ResponseEntity.ok(portfolioApiService.addPosition(position, position.userid()));
+        return ResponseEntity.ok(portfolioApiService.addPosition(position, id));
     }
 
-    @PutMapping("/modify")
-    public ResponseEntity<String> modifyPosition(@RequestBody StockPositionDTO position) {
-        if (position.userid() == null) {
-            return ResponseEntity.badRequest().body("userid es requerido");
+    @PutMapping("/modify/{id}")
+    public ResponseEntity<String> modifyPosition(@PathVariable Long id, @RequestBody StockPositionDTO position) {
+        if (id == null) {
+            return ResponseEntity.badRequest().body("userid is required");
         }
-        return ResponseEntity.ok(portfolioApiService.modifyPosition(position, position.userid()));
+        return ResponseEntity.ok(portfolioApiService.modifyPosition(position, id));
     }
 
-    @DeleteMapping("/delete")
-    public ResponseEntity<String> deletePosition(@RequestBody StockPositionDTO position) {
-        if (position.userid() == null) {
-            return ResponseEntity.badRequest().body("userid es requerido");
+    @DeleteMapping("/delete/{id}")
+    public ResponseEntity<String> deletePosition(@PathVariable Long id, @RequestBody StockPositionDTO position) {
+        if (id == null) {
+            return ResponseEntity.badRequest().body("userid is required");
         }
-        return ResponseEntity.ok(portfolioApiService.deletePosition(position, position.userid()));
+        return ResponseEntity.ok(portfolioApiService.deletePosition(position, id));
     }
 
     @PutMapping("/holdings/{id}/manual-update")
-    public String putMethodName(@PathVariable Long id, @RequestBody ManualUpdateDTO dto) {
+    public String syncHolding(@PathVariable Long id, @RequestBody ManualUpdateDTO dto) {
         portfolioApiService.syncHoldingManually(id, dto.totalShares(),dto.avgPrice());
         
         return "entity";

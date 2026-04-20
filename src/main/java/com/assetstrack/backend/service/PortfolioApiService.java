@@ -83,13 +83,12 @@ public class PortfolioApiService implements IPortfolioApiService {
         User user = userRepo.findById(userId)
             .orElseThrow(() -> new RuntimeException("User not found"));
         List<HoldingDTO> portfolioData = holdingRepo.findByUserId(userId).stream().map(Mapper::toDTO).toList();
-        
         for (HoldingDTO holdingDTO : portfolioData) {
             if (holdingDTO.getTicker().contains(position.ticker())) {
                 return "The position has already been added.";
             }
         }
-        Holding newPosition = new Holding();
+       Holding newPosition = new Holding();
         newPosition.setUser(user);
         newPosition.setTicker(position.ticker());
         newPosition.setCompanyName(position.companyName());
@@ -144,8 +143,7 @@ public class PortfolioApiService implements IPortfolioApiService {
         syncTx.setShares(diffShares);
         syncTx.setPrice(targetAvgPrice);
         syncTx.setType("SYNC");
-        syncTx.setDate(LocalDate.parse("2025-02-20"));
-        //syncTx.setDate(LocalDate.now());
+        syncTx.setDate(LocalDate.now());
         syncTx.setCurrency(holding.getNativeCurrency());
         
         transactionRepo.save(syncTx);
