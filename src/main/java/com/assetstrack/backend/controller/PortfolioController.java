@@ -18,6 +18,7 @@ import com.assetstrack.backend.model.dto.ManualUpdateDTO;
 import com.assetstrack.backend.model.dto.PortfolioPointDTO;
 import com.assetstrack.backend.model.dto.StockFullDTO;
 import com.assetstrack.backend.model.dto.StockPositionDTO;
+import com.assetstrack.backend.config.SecurityUtils;
 import com.assetstrack.backend.service.IPortfolioApiService;
 import com.assetstrack.backend.service.PortfolioApiService;
 
@@ -28,13 +29,16 @@ import com.assetstrack.backend.service.PortfolioApiService;
 public class PortfolioController{
 
     private final IPortfolioApiService portfolioApiService;
+    private final SecurityUtils securityUtils;
 
-    public PortfolioController(PortfolioApiService portfolioApiService){
+    public PortfolioController(PortfolioApiService portfolioApiService, SecurityUtils securityUtils){
         this.portfolioApiService = portfolioApiService;
+        this.securityUtils = securityUtils;
     }
     
     @GetMapping("/dashboard/{id}")
     public Map<String, Object> getDashboard(@PathVariable Long id) {
+        securityUtils.verifyOwnership(id);
         return portfolioApiService.getPortfolioStatus(id);
     }
 
@@ -48,6 +52,7 @@ public class PortfolioController{
         if (id == null) {
             return ResponseEntity.badRequest().body("userid is required");
         }
+        securityUtils.verifyOwnership(id);
         return ResponseEntity.ok(portfolioApiService.addPosition(position, id));
     }
 
@@ -56,6 +61,7 @@ public class PortfolioController{
         if (id == null) {
             return ResponseEntity.badRequest().body("userid is required");
         }
+        securityUtils.verifyOwnership(id);
         return ResponseEntity.ok(portfolioApiService.modifyPosition(position, id));
     }
 
@@ -64,13 +70,14 @@ public class PortfolioController{
         if (id == null) {
             return ResponseEntity.badRequest().body("userid is required");
         }
+        securityUtils.verifyOwnership(id);
         return ResponseEntity.ok(portfolioApiService.deletePosition(position, id));
     }
 
     @PutMapping("/holdings/{id}/manual-update")
     public String syncHolding(@PathVariable Long id, @RequestBody ManualUpdateDTO dto) {
+        securityUtils.verifyOwnership(id);
         portfolioApiService.syncHoldingManually(id, dto.totalShares(),dto.avgPrice());
-        
         return "entity";
     }
     
@@ -79,7 +86,7 @@ public class PortfolioController{
             @PathVariable Long id,
             @RequestParam(defaultValue = "historic") String mode,
             @RequestParam(defaultValue = "1d") String period) {
-
+        securityUtils.verifyOwnership(id);
         if ("intraday".equals(mode)) {
             return portfolioApiService.getTodayIntraday(id, period); 
         }

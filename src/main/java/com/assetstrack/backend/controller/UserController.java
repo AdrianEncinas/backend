@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.assetstrack.backend.model.dto.LoginRequest;
 import com.assetstrack.backend.model.dto.UserDTO;
 import com.assetstrack.backend.model.dto.UserResponse;
+import com.assetstrack.backend.config.SecurityUtils;
 import com.assetstrack.backend.service.IUserService;
 
 import jakarta.validation.Valid;
@@ -27,9 +28,11 @@ import jakarta.validation.Valid;
 public class UserController {
 
     IUserService userService;
+    SecurityUtils securityUtils;
 
-    public UserController(IUserService userService) {
+    public UserController(IUserService userService, SecurityUtils securityUtils) {
         this.userService = userService;
+        this.securityUtils = securityUtils;
     }
 
     @PostMapping("/login")
@@ -44,6 +47,7 @@ public class UserController {
 
     @GetMapping("/get/{id}")
     public UserResponse getUserById(@PathVariable Long id) {
+        securityUtils.verifyOwnership(id);
         return userService.getUser(id);
     }
 
@@ -54,12 +58,14 @@ public class UserController {
 
     @PutMapping("/modify/{id}")
     public ResponseEntity<String> modifyUser(@PathVariable Long id, @Valid @RequestBody UserDTO userDto) {
+        securityUtils.verifyOwnership(id);
         userService.modifyUser(id, userDto);
         return ResponseEntity.ok("User modified");
     }
 
     @DeleteMapping("/delete/{id}")
     public ResponseEntity<String> deleteUser(@PathVariable Long id) {
+        securityUtils.verifyOwnership(id);
         userService.deleteUser(id);
         return ResponseEntity.noContent().build();
     }
