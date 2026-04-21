@@ -59,7 +59,6 @@ public class Mapper {
         
         return new WatchlistDTO(
             watchlist.getId(),
-            watchlist.getUser().getId(),
             watchlist.getTicker(),
             watchlist.getCompanyName()
         );

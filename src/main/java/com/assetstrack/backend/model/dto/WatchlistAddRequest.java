@@ -1,7 +1,6 @@
 package com.assetstrack.backend.model.dto;
 
-public record WatchlistDTO(
-    Long id,
+public record WatchlistAddRequest(
     String ticker,
     String companyName
 ) {}

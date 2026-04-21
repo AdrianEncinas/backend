@@ -13,7 +13,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.assetstrack.backend.model.dto.TickerSearchDTO;
+import com.assetstrack.backend.model.dto.WatchlistAddRequest;
 import com.assetstrack.backend.model.dto.WatchlistDTO;
+import com.assetstrack.backend.config.SecurityUtils;
 import com.assetstrack.backend.service.MarketService;
 
 
@@ -23,9 +25,11 @@ import com.assetstrack.backend.service.MarketService;
 public class MarketController {
 
     private final MarketService marketService;
+    private final SecurityUtils securityUtils;
 
-    public MarketController(MarketService marketService){
+    public MarketController(MarketService marketService, SecurityUtils securityUtils){
         this.marketService = marketService;
+        this.securityUtils = securityUtils;
     }
 
     @GetMapping("/search")
@@ -33,21 +37,23 @@ public class MarketController {
         return marketService.searchTicker(query);
     }
     
-    @GetMapping("/watchlist/{id}")
-    public List<WatchlistDTO> getWatchlist(@PathVariable Long id) {
-        return marketService.getWatchlist(id);
+    @GetMapping("/watchlist")
+    public List<WatchlistDTO> getWatchlist() {
+        Long userId = securityUtils.getAuthenticatedUserId();
+        return marketService.getWatchlist(userId);
     }
 
-    @PostMapping("/watchlist/add")
-    public WatchlistDTO addToWatchlist(@RequestBody WatchlistDTO entity) {
-        System.out.println("entity: " + entity);
-        return marketService.addToWatchlist(entity);
+    @PostMapping("/watchlist")
+    public WatchlistDTO addToWatchlist(@RequestBody WatchlistAddRequest request) {
+        Long userId = securityUtils.getAuthenticatedUserId();
+        return marketService.addToWatchlist(request, userId);
     }
 
-    @DeleteMapping("/watchlist/delete")
-    public ResponseEntity<String> deleteWatchlist(@RequestBody WatchlistDTO entity) {
-        marketService.deleteWathlist(entity);
-        return ResponseEntity.ok(entity.companyName() + " deleted from watchlist");
+    @DeleteMapping("/watchlist/{watchlistItemId}")
+    public ResponseEntity<String> deleteWatchlist(@PathVariable Long watchlistItemId) {
+        Long userId = securityUtils.getAuthenticatedUserId();
+        marketService.deleteFromWatchlist(watchlistItemId, userId);
+        return ResponseEntity.noContent().build();
     }
     
     
