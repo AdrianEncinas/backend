@@ -80,18 +80,20 @@ public class PortfolioApiService implements IPortfolioApiService {
                 .toFuture();
     }
 
-    public String addPosition(StockPositionDTO position,Long userId){
+    public String addPosition(StockPositionDTO position, Long userId) {
         User user = userRepo.findById(userId)
-            .orElseThrow(() -> new RuntimeException("User not found"));
-        List<HoldingDTO> portfolioData = holdingRepo.findByUserId(userId).stream().map(Mapper::toDTO).toList();
-        for (HoldingDTO holdingDTO : portfolioData) {
-            if (holdingDTO.getTicker().contains(position.ticker())) {
-                return "The position has already been added.";
-            }
+            .orElseThrow(() -> new NotFoundException("User not found with id: " + userId));
+
+        boolean alreadyExists = holdingRepo.findByUserId(userId).stream()
+            .anyMatch(h -> h.getTicker().equalsIgnoreCase(position.ticker()));
+
+        if (alreadyExists) {
+            throw new IllegalArgumentException("Position '" + position.ticker() + "' already exists in the portfolio");
         }
-       Holding newPosition = new Holding();
+
+        Holding newPosition = new Holding();
         newPosition.setUser(user);
-        newPosition.setTicker(position.ticker());
+        newPosition.setTicker(position.ticker().toUpperCase());
         newPosition.setCompanyName(position.companyName());
         newPosition.setTotalShares(position.shares());
         newPosition.setAvgPrice(position.avgPrice());
@@ -100,35 +102,27 @@ public class PortfolioApiService implements IPortfolioApiService {
         return "Position added";
     }
 
-    public String modifyPosition(StockPositionDTO position,Long userId){
-        List<HoldingDTO> portfolioData = holdingRepo.findByUserId(userId).stream().map(Mapper::toDTO).toList();
-        
-        for (HoldingDTO holdingDTO : portfolioData) {
-            if (holdingDTO.getTicker().contains(position.ticker())) {
-                Holding modifiedPosition = holdingRepo.findById(holdingDTO.getId())
-                    .orElseThrow(() -> new NotFoundException("Position not found"));
-                modifiedPosition.setTotalShares(position.shares());
-                modifiedPosition.setAvgPrice(position.avgPrice());
-                holdingRepo.save(modifiedPosition);
-                return "The position has been modified.";
-            }
-        }
-        return "Error modifying the position";
+    public String modifyPosition(StockPositionDTO position, Long userId) {
+        Holding holding = holdingRepo.findByUserId(userId).stream()
+            .filter(h -> h.getTicker().equalsIgnoreCase(position.ticker()))
+            .findFirst()
+            .orElseThrow(() -> new NotFoundException("Position '" + position.ticker() + "' not found in portfolio"));
+
+        holding.setTotalShares(position.shares());
+        holding.setAvgPrice(position.avgPrice());
+        holdingRepo.save(holding);
+        return "The position has been modified.";
     }
 
     @Override
-    public String deletePosition(StockPositionDTO position, Long userId) {
-        List<HoldingDTO> portfolioData = holdingRepo.findByUserId(userId).stream().map(Mapper::toDTO).toList();
+    public String deletePosition(String ticker, Long userId) {
+        Holding holding = holdingRepo.findByUserId(userId).stream()
+            .filter(h -> h.getTicker().equalsIgnoreCase(ticker))
+            .findFirst()
+            .orElseThrow(() -> new NotFoundException("Position '" + ticker + "' not found in portfolio"));
 
-        for (HoldingDTO holdingDTO : portfolioData) {
-            if (holdingDTO.getTicker().contains(position.ticker())) {
-                Holding deletedPosition = holdingRepo.findById(holdingDTO.getId())
-                    .orElseThrow(() -> new NotFoundException("Position not found"));
-                holdingRepo.delete(deletedPosition);
-                return "The position has been deleted.";
-            }
-        }
-        return "Error deleting the position";
+        holdingRepo.delete(holding);
+        return "The position has been deleted.";
     }
 
     @Transactional

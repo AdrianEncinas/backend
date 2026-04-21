@@ -23,7 +23,7 @@ public interface IPortfolioApiService {
 
     String modifyPosition(StockPositionDTO position,Long userId);
 
-    String deletePosition(StockPositionDTO position,Long userId);
+    String deletePosition(String ticker, Long userId);
 
     HoldingDTO syncHoldingManually(Long holdingId, Long userId, BigDecimal targetShares, BigDecimal targetAvgPrice);
 

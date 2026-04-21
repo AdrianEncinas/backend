@@ -5,6 +5,7 @@ import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -16,6 +17,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.validation.Valid;
+
 import com.assetstrack.backend.model.dto.ManualUpdateDTO;
 import com.assetstrack.backend.model.dto.PortfolioPointDTO;
 import com.assetstrack.backend.model.dto.StockFullDTO;
@@ -26,6 +29,7 @@ import com.assetstrack.backend.service.PortfolioApiService;
 
 @RestController
 @RequestMapping("/api/v1/portfolio")
+@Validated
 public class PortfolioController {
 
     private final IPortfolioApiService portfolioApiService;
@@ -48,21 +52,21 @@ public class PortfolioController {
     }
 
     @PostMapping("/positions")
-    public ResponseEntity<String> addPosition(@RequestBody StockPositionDTO position) {
+    public ResponseEntity<String> addPosition(@Valid @RequestBody StockPositionDTO position) {
         Long userId = securityUtils.getAuthenticatedUserId();
         return ResponseEntity.status(HttpStatus.CREATED).body(portfolioApiService.addPosition(position, userId));
     }
 
     @PutMapping("/positions")
-    public ResponseEntity<String> modifyPosition(@RequestBody StockPositionDTO position) {
+    public ResponseEntity<String> modifyPosition(@Valid @RequestBody StockPositionDTO position) {
         Long userId = securityUtils.getAuthenticatedUserId();
         return ResponseEntity.ok(portfolioApiService.modifyPosition(position, userId));
     }
 
-    @DeleteMapping("/positions")
-    public ResponseEntity<String> deletePosition(@RequestBody StockPositionDTO position) {
+    @DeleteMapping("/positions/{ticker}")
+    public ResponseEntity<String> deletePosition(@PathVariable String ticker) {
         Long userId = securityUtils.getAuthenticatedUserId();
-        return ResponseEntity.ok(portfolioApiService.deletePosition(position, userId));
+        return ResponseEntity.ok(portfolioApiService.deletePosition(ticker, userId));
     }
 
     @PatchMapping("/holdings/{holdingId}")
