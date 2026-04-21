@@ -3,9 +3,11 @@ package com.assetstrack.backend.controller;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -22,75 +24,63 @@ import com.assetstrack.backend.config.SecurityUtils;
 import com.assetstrack.backend.service.IPortfolioApiService;
 import com.assetstrack.backend.service.PortfolioApiService;
 
-
-
 @RestController
 @RequestMapping("/api/v1/portfolio")
-public class PortfolioController{
+public class PortfolioController {
 
     private final IPortfolioApiService portfolioApiService;
     private final SecurityUtils securityUtils;
 
-    public PortfolioController(PortfolioApiService portfolioApiService, SecurityUtils securityUtils){
+    public PortfolioController(PortfolioApiService portfolioApiService, SecurityUtils securityUtils) {
         this.portfolioApiService = portfolioApiService;
         this.securityUtils = securityUtils;
     }
-    
-    @GetMapping("/dashboard/{id}")
-    public Map<String, Object> getDashboard(@PathVariable Long id) {
-        securityUtils.verifyOwnership(id);
-        return portfolioApiService.getPortfolioStatus(id);
+
+    @GetMapping("/dashboard")
+    public Map<String, Object> getDashboard() {
+        Long userId = securityUtils.getAuthenticatedUserId();
+        return portfolioApiService.getPortfolioStatus(userId);
     }
 
-    @GetMapping("/stock/{ticker}")
-    public StockFullDTO getStockFull(@PathVariable String ticker) {
+    @GetMapping("/stocks/{ticker}")
+    public StockFullDTO getStockDetails(@PathVariable String ticker) {
         return portfolioApiService.getFullStockDetails(ticker);
     }
 
-    @PostMapping("/add/{id}")
-    public ResponseEntity<String> addPosition(@PathVariable Long id, @RequestBody StockPositionDTO position) {
-        if (id == null) {
-            return ResponseEntity.badRequest().body("userid is required");
-        }
-        securityUtils.verifyOwnership(id);
-        return ResponseEntity.ok(portfolioApiService.addPosition(position, id));
+    @PostMapping("/positions")
+    public ResponseEntity<String> addPosition(@RequestBody StockPositionDTO position) {
+        Long userId = securityUtils.getAuthenticatedUserId();
+        return ResponseEntity.status(HttpStatus.CREATED).body(portfolioApiService.addPosition(position, userId));
     }
 
-    @PutMapping("/modify/{id}")
-    public ResponseEntity<String> modifyPosition(@PathVariable Long id, @RequestBody StockPositionDTO position) {
-        if (id == null) {
-            return ResponseEntity.badRequest().body("userid is required");
-        }
-        securityUtils.verifyOwnership(id);
-        return ResponseEntity.ok(portfolioApiService.modifyPosition(position, id));
+    @PutMapping("/positions")
+    public ResponseEntity<String> modifyPosition(@RequestBody StockPositionDTO position) {
+        Long userId = securityUtils.getAuthenticatedUserId();
+        return ResponseEntity.ok(portfolioApiService.modifyPosition(position, userId));
     }
 
-    @DeleteMapping("/delete/{id}")
-    public ResponseEntity<String> deletePosition(@PathVariable Long id, @RequestBody StockPositionDTO position) {
-        if (id == null) {
-            return ResponseEntity.badRequest().body("userid is required");
-        }
-        securityUtils.verifyOwnership(id);
-        return ResponseEntity.ok(portfolioApiService.deletePosition(position, id));
+    @DeleteMapping("/positions")
+    public ResponseEntity<String> deletePosition(@RequestBody StockPositionDTO position) {
+        Long userId = securityUtils.getAuthenticatedUserId();
+        return ResponseEntity.ok(portfolioApiService.deletePosition(position, userId));
     }
 
-    @PutMapping("/holdings/{id}/manual-update")
-    public String syncHolding(@PathVariable Long id, @RequestBody ManualUpdateDTO dto) {
-        securityUtils.verifyOwnership(id);
-        portfolioApiService.syncHoldingManually(id, dto.totalShares(),dto.avgPrice());
-        return "entity";
+    @PatchMapping("/holdings/{holdingId}")
+    public ResponseEntity<Void> updateHolding(@PathVariable Long holdingId, @RequestBody ManualUpdateDTO dto) {
+        Long userId = securityUtils.getAuthenticatedUserId();
+        portfolioApiService.syncHoldingManually(holdingId, userId, dto.totalShares(), dto.avgPrice());
+        return ResponseEntity.noContent().build();
     }
-    
-    @GetMapping("/{id}/graph")
+
+    @GetMapping("/graph")
     public List<PortfolioPointDTO> getGraph(
-            @PathVariable Long id,
             @RequestParam(defaultValue = "historic") String mode,
             @RequestParam(defaultValue = "1d") String period) {
-        securityUtils.verifyOwnership(id);
+        Long userId = securityUtils.getAuthenticatedUserId();
         if ("intraday".equals(mode)) {
-            return portfolioApiService.getTodayIntraday(id, period); 
+            return portfolioApiService.getTodayIntraday(userId, period);
         }
-        return portfolioApiService.getPortfolioHistory(id);
+        return portfolioApiService.getPortfolioHistory(userId);
     }
-    
 }
+

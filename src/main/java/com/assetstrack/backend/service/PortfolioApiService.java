@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
+import org.springframework.security.access.AccessDeniedException;
 
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.scheduling.annotation.Async;
@@ -131,9 +132,13 @@ public class PortfolioApiService implements IPortfolioApiService {
     }
 
     @Transactional
-    public HoldingDTO syncHoldingManually(Long holdingId, BigDecimal targetShares, BigDecimal targetAvgPrice) {
+    public HoldingDTO syncHoldingManually(Long holdingId, Long userId, BigDecimal targetShares, BigDecimal targetAvgPrice) {
         Holding holding = holdingRepo.findById(holdingId)
             .orElseThrow(() -> new RuntimeException("Posición no encontrada"));
+
+        if (!holding.getUser().getId().equals(userId)) {
+            throw new AccessDeniedException("Access denied: this holding does not belong to you");
+        }
 
         BigDecimal currentShares = holding.getTotalShares() != null ? holding.getTotalShares() : BigDecimal.ZERO;
         BigDecimal diffShares = targetShares.subtract(currentShares);

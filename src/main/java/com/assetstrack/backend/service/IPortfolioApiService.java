@@ -25,7 +25,7 @@ public interface IPortfolioApiService {
 
     String deletePosition(StockPositionDTO position,Long userId);
 
-    HoldingDTO syncHoldingManually(Long holdingId, BigDecimal targetShares, BigDecimal targetAvgPrice);
+    HoldingDTO syncHoldingManually(Long holdingId, Long userId, BigDecimal targetShares, BigDecimal targetAvgPrice);
 
     List<PortfolioPointDTO> getPortfolioHistory(Long userId);
 

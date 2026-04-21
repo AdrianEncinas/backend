@@ -1,7 +1,309 @@
 ================================================================================
                     DOCUMENTACIÓN DE FUNCIONES - BACKEND ASSETSTRACK
-                               Marzo 2026
+                               Abril 2026
 ================================================================================
+
+Este documento describe todas las funciones y endpoints disponibles en el backend
+de AssetsTrack, organizados por controlador y servicio.
+
+NOTA: El userId NUNCA es enviado por el cliente. Siempre se extrae del token JWT
+en el servidor mediante SecurityUtils. Todos los endpoints marcados con [AUTH]
+requieren la cabecera: Authorization: Bearer <token>
+
+================================================================================
+CONTENIDO:
+================================================================================
+1. Controlador de Usuarios (UserController)
+2. Controlador de Portfolio (PortfolioController)
+3. Controlador de Mercado (MarketController)
+4. Controlador de Gráficos (ChartController)
+5. Servicio de Usuarios (UserService)
+6. Servicio de Portfolio (PortfolioApiService)
+7. Servicio de Mercado (MarketService)
+
+================================================================================
+1. CONTROLADOR DE USUARIOS (UserController)
+================================================================================
+   Ruta Base: /api/v1/users
+
+A) POST /api/v1/users/login  [PÚBLICO]
+   Descripción: Autentica un usuario y devuelve un token JWT
+   Body (JSON):
+   {
+       "username": "string",
+       "password": "string"
+   }
+   Respuesta Exitosa (200):
+   { "token": "eyJhbGci..." }
+   Respuesta Error (401): Token inválido o credenciales incorrectas
+
+B) POST /api/v1/users/register  [PÚBLICO]
+   Descripción: Crea un nuevo usuario (registro)
+   Body (JSON):
+   {
+       "username": "string",
+       "password": "string",
+       "baseCurrency": "string"
+   }
+   Respuesta Exitosa (201): UserResponse con el nuevo usuario creado
+
+C) GET /api/v1/users/me  [AUTH]
+   Descripción: Obtiene el perfil del usuario autenticado
+   Respuesta (200): UserResponse con los datos del usuario
+
+D) PUT /api/v1/users/me  [AUTH]
+   Descripción: Modifica los datos del usuario autenticado
+   Body (JSON):
+   {
+       "username": "string",
+       "password": "string",
+       "baseCurrency": "string"
+   }
+   Respuesta (200): UserResponse con los datos actualizados
+
+E) DELETE /api/v1/users/me  [AUTH]
+   Descripción: Elimina la cuenta del usuario autenticado
+   Respuesta (204): Sin contenido
+
+================================================================================
+2. CONTROLADOR DE PORTFOLIO (PortfolioController)
+================================================================================
+   Ruta Base: /api/v1/portfolio
+   Todos los endpoints requieren autenticación [AUTH].
+   El userId siempre se obtiene del token JWT.
+
+A) GET /api/v1/portfolio/dashboard  [AUTH]
+   Descripción: Obtiene el estado general del portfolio del usuario autenticado
+   Respuesta (200): Map con información del estado del portfolio
+   - Valor total actual, coste total, P&L, posiciones por acción
+
+B) GET /api/v1/portfolio/stocks/{ticker}  [AUTH]
+   Descripción: Obtiene los detalles completos de una acción específica
+   Parámetros:
+   - ticker (String): Símbolo bursátil (ej: AAPL, MSFT)
+   Respuesta (200): StockFullDTO con información detallada de la acción
+
+C) POST /api/v1/portfolio/positions  [AUTH]
+   Descripción: Añade una nueva posición al portfolio
+   Body (JSON):
+   {
+       "ticker": "string",
+       "companyName": "string",
+       "shares": number,
+       "avg_price": number
+   }
+   Respuesta (201): "Position added" o "The position has already been added."
+
+D) PUT /api/v1/portfolio/positions  [AUTH]
+   Descripción: Modifica una posición existente en el portfolio
+   Body (JSON):
+   {
+       "ticker": "string",
+       "shares": number,
+       "avg_price": number
+   }
+   Respuesta (200): "The position has been modified." o mensaje de error
+
+E) DELETE /api/v1/portfolio/positions  [AUTH]
+   Descripción: Elimina una posición del portfolio
+   Body (JSON):
+   { "ticker": "string" }
+   Respuesta (200): "The position has been deleted." o mensaje de error
+
+F) PATCH /api/v1/portfolio/holdings/{holdingId}  [AUTH]
+   Descripción: Actualiza manualmente los datos de un holding concreto.
+                Verifica que el holding pertenece al usuario autenticado.
+   Parámetros:
+   - holdingId (Long): ID del holding a actualizar
+   Body (JSON):
+   {
+       "totalShares": number,
+       "avgPrice": number
+   }
+   Respuesta (204): Sin contenido
+   Error (403): Si el holding no pertenece al usuario autenticado
+
+G) GET /api/v1/portfolio/graph  [AUTH]
+   Descripción: Obtiene los datos gráficos del portfolio
+   Query params:
+   - mode (String, opcional): "historic" (default) o "intraday"
+   - period (String, opcional): "1d" (default), "5d", "1mo", etc.
+   Respuesta (200): Lista de PortfolioPointDTO
+   
+   Modos:
+   - historic: Datos históricos desde la primera transacción hasta hoy
+   - intraday: Datos del día actual a intervalos
+
+================================================================================
+3. CONTROLADOR DE MERCADO (MarketController)
+================================================================================
+   Ruta Base: /api/v1/market
+   Todos los endpoints requieren autenticación [AUTH].
+   El userId siempre se obtiene del token JWT.
+
+A) GET /api/v1/market/search?query=  [AUTH]
+   Descripción: Busca acciones en el mercado por nombre o símbolo
+   Query params:
+   - query (String): Término de búsqueda (ej: "Apple", "AAPL")
+   Respuesta (200): Lista de TickerSearchDTO
+
+B) GET /api/v1/market/watchlist  [AUTH]
+   Descripción: Obtiene la lista de seguimiento del usuario autenticado
+   Respuesta (200): Lista de WatchlistDTO
+
+C) POST /api/v1/market/watchlist  [AUTH]
+   Descripción: Añade una acción a la lista de seguimiento.
+                El userId se inyecta desde el token, no del body.
+   Body (JSON):
+   {
+       "ticker": "string",
+       "companyName": "string"
+   }
+   Respuesta (200): WatchlistDTO con la nueva entrada creada
+
+D) DELETE /api/v1/market/watchlist/{watchlistItemId}  [AUTH]
+   Descripción: Elimina una entrada de la lista de seguimiento.
+                Verifica que el item pertenece al usuario autenticado.
+   Parámetros:
+   - watchlistItemId (Long): ID de la entrada watchlist a eliminar
+   Respuesta (204): Sin contenido
+   Error (403): Si el item no pertenece al usuario autenticado
+
+================================================================================
+4. CONTROLADOR DE GRÁFICOS (ChartController)
+================================================================================
+   Ruta Base: /api/v1/chart
+
+A) GET /api/v1/chart/{ticker}  [AUTH]
+   Descripción: Obtiene los datos gráficos de una acción específica
+   Parámetros:
+   - ticker (String): Símbolo bursátil
+   - period (String, opcional): "1mo" (default). Valores: "1d","5d","1mo","3mo","6mo","1y"
+   Respuesta (200): ChartDTO con serie histórica de precios
+
+================================================================================
+5. SERVICIO DE USUARIOS (UserService)
+================================================================================
+   Implementa: IUserService
+
+A) login(LoginRequest): Map<String, String>
+   Autentica al usuario y retorna el token JWT.
+
+B) getUser(Long id): UserResponse
+   Obtiene un usuario por ID. Lanza NotFoundException si no existe.
+
+C) createUser(UserDTO): UserResponse
+   Crea un nuevo usuario. El ID se genera automáticamente.
+
+D) modifyUser(Long id, UserDTO): UserResponse
+   Modifica username, password y baseCurrency. Lanza NotFoundException si no existe.
+
+E) deleteUser(long id): void
+   Elimina un usuario. Lanza NotFoundException si no existe.
+
+================================================================================
+6. SERVICIO DE PORTFOLIO (PortfolioApiService)
+================================================================================
+   Implementa: IPortfolioApiService
+   Comunicación: Se conecta con servicio Python via WebClient (http://localhost:5000)
+
+A) getPortfolioStatus(Long userId): Map<String, Object>
+   Obtiene holdings del usuario, los envía al servicio Python y retorna el estado
+   calculado del portfolio (valor total, P&L, porcentajes).
+
+B) getFullStockDetails(String ticker): StockFullDTO
+   Llama a /api/v1/stock/{ticker}/full en el servicio Python.
+
+C) getFullChart(String ticker, String period): CompletableFuture<ChartDTO>
+   Obtiene datos gráficos de una acción. Llamada asíncrona al servicio Python.
+
+D) addPosition(StockPositionDTO position, Long userId): String
+   Verifica que no exista el ticker duplicado y crea un nuevo Holding.
+   Retorna: "Position added" o "The position has already been added."
+
+E) modifyPosition(StockPositionDTO position, Long userId): String
+   Busca el holding por ticker y userId, actualiza shares y avgPrice.
+
+F) deletePosition(StockPositionDTO position, Long userId): String
+   Busca el holding por ticker y userId, elimina holding y sus transacciones.
+
+G) syncHoldingManually(Long holdingId, Long userId, BigDecimal targetShares, BigDecimal targetAvgPrice): HoldingDTO
+   Verifica que el holding pertenece al userId (lanza AccessDeniedException si no).
+   Calcula la diferencia de acciones, crea una transacción tipo "SYNC" y actualiza
+   el holding con los nuevos valores.
+
+H) getPortfolioHistory(Long userId): List<PortfolioPointDTO>
+   Obtiene todas las transacciones del usuario, precios históricos del servicio Python
+   e itera día a día calculando el valor de mercado del portfolio.
+
+I) getTodayIntraday(Long userId, String period): List<PortfolioPointDTO>
+   Obtiene datos intraday de todas las posiciones del usuario y calcula el valor
+   del portfolio en cada timestamp. Convierte USD a EUR (tasa por defecto: 0.92).
+
+================================================================================
+7. SERVICIO DE MERCADO (MarketService)
+================================================================================
+   Implementa: IMarketService
+
+A) searchTicker(String query): List<TickerSearchDTO>
+   Busca acciones en el servicio Python. GET /api/v1/market/search?query=XXX
+
+B) getWatchlist(Long userId): List<WatchlistDTO>
+   Retorna todas las entradas de watchlist del usuario desde la BD.
+
+C) addToWatchlist(WatchlistAddRequest request, Long userId): WatchlistDTO
+   Crea una nueva entrada en watchlist asociada al userId.
+   El userId viene del token, NO del body del request.
+
+D) deleteFromWatchlist(Long watchlistItemId, Long userId): void
+   Verifica que el item pertenece al userId antes de eliminarlo.
+   Lanza AccessDeniedException si el item pertenece a otro usuario.
+
+================================================================================
+SEGURIDAD
+================================================================================
+
+- JWT stateless: cada request incluye Authorization: Bearer <token>
+- SecurityUtils.getAuthenticatedUserId(): extrae el userId del SecurityContext
+- SecurityUtils.verifyOwnership(Long id): lanza 403 si el id no coincide con el
+  usuario autenticado. Usado internamente para rutas legacy con {id} en URL.
+- El userId NUNCA se acepta del cliente en endpoints protegidos.
+- AccessDeniedException → 403 Forbidden (manejado en GlobalExceptionHandler)
+- NotFoundException → 404 Not Found
+- Validación de beans con Jakarta Validation (@Valid) → 400 Bad Request
+
+================================================================================
+MODELOS DE DATOS (DTOs)
+================================================================================
+
+UserDTO:              id, username, password, baseCurrency
+UserResponse:         (respuesta pública, sin password)
+LoginRequest:         username, password
+StockPositionDTO:     ticker, companyName, shares, avg_price
+HoldingDTO:           id, userId, ticker, companyName, totalShares, avgPrice, nativeCurrency
+PortfolioPointDTO:    date, marketValue, investedCost
+StockFullDTO:         ticker, companyName, currentPrice, currency, exchange, sector, marketCap
+ChartDTO:             ticker, period, prices, timestamps, volume
+TickerSearchDTO:      ticker, companyName, exchange
+WatchlistDTO:         id, userId, ticker, companyName
+WatchlistAddRequest:  ticker, companyName  (sin userId - se obtiene del token)
+ManualUpdateDTO:      totalShares, avgPrice
+
+================================================================================
+CONFIGURACIÓN
+================================================================================
+
+- Puerto backend:          http://localhost:8080
+- Puerto servicio Python:  http://localhost:5000
+- Base de datos:           PostgreSQL en localhost:5432/investdb
+- JWT_SECRET:              Variable de entorno (tiene valor por defecto para dev)
+- JWT_EXPIRATION:          Variable de entorno, default 86400000ms (24h)
+- CORS:                    Configurado en CorsConfig.java
+
+================================================================================
+FIN DE LA DOCUMENTACIÓN
+================================================================================
+
 
 Este documento describe todas las funciones y endpoints disponibles en el backend
 de AssetsTrack, organizados por controlador y servicio.
