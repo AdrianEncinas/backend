@@ -2,7 +2,7 @@ package com.assetstrack.backend.service;
 
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
@@ -15,7 +15,6 @@ import com.assetstrack.backend.model.entity.User;
 import com.assetstrack.backend.model.entity.Watchlist;
 import com.assetstrack.backend.repository.UserRepository;
 import com.assetstrack.backend.repository.WatchlistRepository;
-import org.springframework.security.access.AccessDeniedException;
 
 @Service
 public class MarketService implements IMarketService{
