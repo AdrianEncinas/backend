@@ -95,28 +95,43 @@ public class PortfolioController {
         return ResponseEntity.status(HttpStatus.CREATED).body(portfolioApiService.addPosition(position, userId));
     }
 
+    @Operation(summary = "Modificar posición", description = "Actualiza una posición existente en el portafolio")
+    @ApiResponse(responseCode = "200", description = "Posición modificada correctamente")
     @PutMapping("/positions")
     public ResponseEntity<String> modifyPosition(@Valid @RequestBody StockPositionDTO position) {
         Long userId = securityUtils.getAuthenticatedUserId();
         return ResponseEntity.ok(portfolioApiService.modifyPosition(position, userId));
     }
 
+    @Operation(summary = "Eliminar posición", description = "Elimina una posición completa del portafolio por su ticker")
+    @ApiResponse(responseCode = "200", description = "Posición eliminada correctamente")
     @DeleteMapping("/positions/{ticker}")
-    public ResponseEntity<String> deletePosition(@PathVariable String ticker) {
+    public ResponseEntity<String> deletePosition(
+            @Parameter(description = "Ticker de la acción", example = "AAPL")
+            @PathVariable String ticker) {
         Long userId = securityUtils.getAuthenticatedUserId();
         return ResponseEntity.ok(portfolioApiService.deletePosition(ticker, userId));
     }
 
+    @Operation(summary = "Actualizar participación", description = "Actualiza manualmente la cantidad de acciones y precio promedio de una posición")
+    @ApiResponse(responseCode = "204", description = "Participación actualizada correctamente")
     @PatchMapping("/holdings/{holdingId}")
-    public ResponseEntity<Void> updateHolding(@PathVariable Long holdingId, @RequestBody ManualUpdateDTO dto) {
+    public ResponseEntity<Void> updateHolding(
+            @Parameter(description = "ID de la participación")
+            @PathVariable Long holdingId,
+            @RequestBody ManualUpdateDTO dto) {
         Long userId = securityUtils.getAuthenticatedUserId();
         portfolioApiService.syncHoldingManually(holdingId, userId, dto.totalShares(), dto.avgPrice());
         return ResponseEntity.noContent().build();
     }
 
+    @Operation(summary = "Obtener gráfico del portafolio", description = "Retorna datos históricos o intranuales del portafolio para visualización")
+    @ApiResponse(responseCode = "200", description = "Datos del gráfico obtenidos")
     @GetMapping("/graph")
     public List<PortfolioPointDTO> getGraph(
+            @Parameter(description = "Modo de visualización: 'historic' o 'intraday'", example = "historic")
             @RequestParam(defaultValue = "historic") String mode,
+            @Parameter(description = "Período de tiempo para datos intranuales", example = "1d")
             @RequestParam(defaultValue = "1d") String period) {
         Long userId = securityUtils.getAuthenticatedUserId();
         if ("intraday".equals(mode)) {

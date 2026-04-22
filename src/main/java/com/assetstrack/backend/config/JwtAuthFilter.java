@@ -30,9 +30,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                                     FilterChain filterChain)
             throws ServletException, IOException {
 
-        // Allow unauthenticated access to OpenAPI/Swagger endpoints
         String path = request.getServletPath();
-        if (path != null && (path.startsWith("/v3/api-docs") || path.startsWith("/swagger-ui") || path.equals("/swagger-ui.html"))) {
+        if (isSwaggerOrOpenApiPath(path)) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -67,5 +66,17 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private boolean isSwaggerOrOpenApiPath(String path) {
+        return path != null && (
+                path.startsWith("/v3/api-docs")
+                        || path.equals("/swagger-ui")
+                        || path.equals("/swagger-ui/")
+                        || path.startsWith("/swagger-ui")
+                        || path.equals("/swagger-ui.html")
+                        || path.startsWith("/swagger-resources")
+                        || path.startsWith("/webjars")
+        );
     }
 }
