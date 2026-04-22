@@ -84,9 +84,9 @@ class PortfolioApiServiceTest {
         when(userRepo.findById(1L)).thenReturn(Optional.of(user));
         when(holdingRepo.findByUserId(1L)).thenReturn(List.of(holding));
 
-        String result = portfolioApiService.addPosition(position, 1L);
-
-        assertThat(result).isEqualTo("The position has already been added.");
+        assertThatThrownBy(() -> portfolioApiService.addPosition(position, 1L))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("already exists");
         verify(holdingRepo, never()).save(any());
     }
 
@@ -110,7 +110,6 @@ class PortfolioApiServiceTest {
                 "AAPL", "Apple Inc.", new BigDecimal("20"), new BigDecimal("155.00"), 1L);
 
         when(holdingRepo.findByUserId(1L)).thenReturn(List.of(holding));
-        when(holdingRepo.findById(10L)).thenReturn(Optional.of(holding));
         when(holdingRepo.save(any(Holding.class))).thenReturn(holding);
 
         String result = portfolioApiService.modifyPosition(position, 1L);
@@ -126,9 +125,9 @@ class PortfolioApiServiceTest {
 
         when(holdingRepo.findByUserId(1L)).thenReturn(List.of(holding)); // solo AAPL
 
-        String result = portfolioApiService.modifyPosition(position, 1L);
-
-        assertThat(result).isEqualTo("Error modifying the position");
+        assertThatThrownBy(() -> portfolioApiService.modifyPosition(position, 1L))
+            .isInstanceOf(NotFoundException.class)
+            .hasMessageContaining("not found");
         verify(holdingRepo, never()).save(any());
     }
 
@@ -136,13 +135,9 @@ class PortfolioApiServiceTest {
 
     @Test
     void deletePosition_existingTicker_deletesAndReturnsSuccess() {
-        StockPositionDTO position = new StockPositionDTO(
-                "AAPL", "Apple Inc.", BigDecimal.ZERO, BigDecimal.ZERO, 1L);
-
         when(holdingRepo.findByUserId(1L)).thenReturn(List.of(holding));
-        when(holdingRepo.findById(10L)).thenReturn(Optional.of(holding));
 
-        String result = portfolioApiService.deletePosition(position, 1L);
+        String result = portfolioApiService.deletePosition("AAPL", 1L);
 
         assertThat(result).isEqualTo("The position has been deleted.");
         verify(holdingRepo).delete(holding);
@@ -150,14 +145,11 @@ class PortfolioApiServiceTest {
 
     @Test
     void deletePosition_tickerNotFound_returnsErrorMessage() {
-        StockPositionDTO position = new StockPositionDTO(
-                "TSLA", "Tesla", BigDecimal.ZERO, BigDecimal.ZERO, 1L);
-
         when(holdingRepo.findByUserId(1L)).thenReturn(List.of(holding)); // solo AAPL
 
-        String result = portfolioApiService.deletePosition(position, 1L);
-
-        assertThat(result).isEqualTo("Error deleting the position");
+        assertThatThrownBy(() -> portfolioApiService.deletePosition("TSLA", 1L))
+            .isInstanceOf(NotFoundException.class)
+            .hasMessageContaining("not found");
         verify(holdingRepo, never()).delete(any());
     }
 
@@ -170,7 +162,7 @@ class PortfolioApiServiceTest {
         when(holdingRepo.save(any(Holding.class))).thenReturn(holding);
 
         HoldingDTO result = portfolioApiService.syncHoldingManually(
-                10L, new BigDecimal("25"), new BigDecimal("160.00"));
+                10L, 1L, new BigDecimal("25"), new BigDecimal("160.00"));
 
         assertThat(result).isNotNull();
         verify(transactionRepo).save(any());
@@ -182,7 +174,7 @@ class PortfolioApiServiceTest {
         when(holdingRepo.findById(99L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() ->
-                portfolioApiService.syncHoldingManually(99L, new BigDecimal("10"), new BigDecimal("100")))
+                portfolioApiService.syncHoldingManually(99L, 1L, new BigDecimal("10"), new BigDecimal("100")))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("no encontrada");
     }

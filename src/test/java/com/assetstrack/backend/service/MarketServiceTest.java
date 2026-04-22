@@ -1,6 +1,7 @@
 package com.assetstrack.backend.service;
 
 import com.assetstrack.backend.model.dto.TickerSearchDTO;
+import com.assetstrack.backend.model.dto.WatchlistAddRequest;
 import com.assetstrack.backend.model.dto.WatchlistDTO;
 import com.assetstrack.backend.model.entity.User;
 import com.assetstrack.backend.model.entity.Watchlist;
@@ -89,7 +90,6 @@ class MarketServiceTest {
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).ticker()).isEqualTo("AAPL");
-        assertThat(result.get(0).userId()).isEqualTo(1L);
     }
 
     @Test
@@ -105,7 +105,7 @@ class MarketServiceTest {
 
     @Test
     void addToWatchlist_validUser_savesAndReturnsDTO() {
-        WatchlistDTO input = new WatchlistDTO(null, 1L, "GOOGL", "Alphabet Inc.");
+        WatchlistAddRequest input = new WatchlistAddRequest("GOOGL", "Alphabet Inc.");
 
         Watchlist saved = Watchlist.builder()
                 .id(20L)
@@ -117,7 +117,7 @@ class MarketServiceTest {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(watchlistRepo.save(any(Watchlist.class))).thenReturn(saved);
 
-        WatchlistDTO result = marketService.addToWatchlist(input);
+        WatchlistDTO result = marketService.addToWatchlist(input, 1L);
 
         assertThat(result.id()).isEqualTo(20L);
         assertThat(result.ticker()).isEqualTo("GOOGL");
@@ -126,33 +126,31 @@ class MarketServiceTest {
 
     @Test
     void addToWatchlist_userNotFound_throwsRuntimeException() {
-        WatchlistDTO input = new WatchlistDTO(null, 99L, "GOOGL", "Alphabet Inc.");
+        WatchlistAddRequest input = new WatchlistAddRequest("GOOGL", "Alphabet Inc.");
         when(userRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> marketService.addToWatchlist(input))
-                .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("no encontrado");
+        assertThatThrownBy(() -> marketService.addToWatchlist(input, 99L))
+            .isInstanceOf(com.assetstrack.backend.exception.NotFoundException.class)
+            .hasMessageContaining("User not found");
     }
 
     // ── deleteWatchlist ───────────────────────────────────────────────────────
 
     @Test
     void deleteWatchlist_existingId_deletesEntry() {
-        WatchlistDTO input = new WatchlistDTO(10L, 1L, "AAPL", "Apple Inc.");
         when(watchlistRepo.findById(10L)).thenReturn(Optional.of(watchlist));
 
-        marketService.deleteWathlist(input);
+        marketService.deleteFromWatchlist(10L, 1L);
 
         verify(watchlistRepo).delete(watchlist);
     }
 
     @Test
     void deleteWatchlist_nonExistingId_throwsRuntimeException() {
-        WatchlistDTO input = new WatchlistDTO(99L, 1L, "AAPL", "Apple Inc.");
         when(watchlistRepo.findById(99L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> marketService.deleteWathlist(input))
-                .isInstanceOf(RuntimeException.class)
+        assertThatThrownBy(() -> marketService.deleteFromWatchlist(99L, 1L))
+            .isInstanceOf(com.assetstrack.backend.exception.NotFoundException.class)
                 .hasMessageContaining("not found");
     }
 }

@@ -110,7 +110,6 @@ class MapperTest {
         WatchlistDTO dto = Mapper.toDTO(watchlist);
 
         assertThat(dto.id()).isEqualTo(5L);
-        assertThat(dto.userId()).isEqualTo(1L);
         assertThat(dto.ticker()).isEqualTo("MSFT");
         assertThat(dto.companyName()).isEqualTo("Microsoft");
     }

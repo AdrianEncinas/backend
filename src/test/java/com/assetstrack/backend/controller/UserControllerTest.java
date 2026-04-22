@@ -1,6 +1,7 @@
 package com.assetstrack.backend.controller;
 
 import com.assetstrack.backend.config.JwtUtil;
+import com.assetstrack.backend.config.SecurityUtils;
 import com.assetstrack.backend.config.UserDetailsServiceImpl;
 import com.assetstrack.backend.exception.NotFoundException;
 import com.assetstrack.backend.model.dto.LoginRequest;
@@ -16,7 +17,6 @@ import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.util.List;
 import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.*;
@@ -39,6 +39,9 @@ class UserControllerTest {
     @MockitoBean
     private UserDetailsServiceImpl userDetailsService;
 
+        @MockitoBean
+        private SecurityUtils securityUtils;
+
     @Autowired
     private ObjectMapper objectMapper;
 
@@ -53,7 +56,7 @@ class UserControllerTest {
         credentials.setUsername("johndoe");
         credentials.setPassword("secret123");
 
-        mockMvc.perform(post("/api/v1/user/login")
+        mockMvc.perform(post("/api/v1/users/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(credentials)))
                 .andExpect(status().isOk())
@@ -69,50 +72,40 @@ class UserControllerTest {
         credentials.setUsername("bad");
         credentials.setPassword("wrong");
 
-        mockMvc.perform(post("/api/v1/user/login")
+        mockMvc.perform(post("/api/v1/users/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(credentials)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value("User or password incorrect"));
     }
 
-    // ── GET /list ─────────────────────────────────────────────────────────────
+        // ── GET /me ───────────────────────────────────────────────────────────────
 
     @Test
     @WithMockUser
-    void getListUsers_returnsList() throws Exception {
+        void getMe_returnsUser() throws Exception {
         UserResponse user = UserResponse.builder().id(1L).username("johndoe").build();
-        when(userService.getUsers()).thenReturn(List.of(user));
-
-        mockMvc.perform(get("/api/v1/user/list"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].username").value("johndoe"));
-    }
-
-    // ── GET /get/{id} ─────────────────────────────────────────────────────────
-
-    @Test
-    @WithMockUser
-    void getUserById_existingId_returnsUser() throws Exception {
-        UserResponse user = UserResponse.builder().id(1L).username("johndoe").build();
+        when(securityUtils.getAuthenticatedUserId()).thenReturn(1L);
         when(userService.getUser(1L)).thenReturn(user);
 
-        mockMvc.perform(get("/api/v1/user/get/1"))
+        mockMvc.perform(get("/api/v1/users/me"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(1))
-                .andExpect(jsonPath("$.username").value("johndoe"));
+            .andExpect(jsonPath("$.username").value("johndoe"));
     }
+
+        // ── GET /me (error) ───────────────────────────────────────────────────────
 
     @Test
     @WithMockUser
-    void getUserById_nonExistingId_returns500() throws Exception {
+        void getMe_nonExistingId_returns500() throws Exception {
+        when(securityUtils.getAuthenticatedUserId()).thenReturn(99L);
         when(userService.getUser(99L)).thenThrow(new RuntimeException("Usuario no encontrado"));
 
-        mockMvc.perform(get("/api/v1/user/get/99"))
+        mockMvc.perform(get("/api/v1/users/me"))
                 .andExpect(status().isInternalServerError());
     }
 
-    // ── POST /create ──────────────────────────────────────────────────────────
+        // ── POST /register ────────────────────────────────────────────────────────
 
     @Test
     void createUser_validBody_returnsCreatedUser() throws Exception {
@@ -120,47 +113,52 @@ class UserControllerTest {
         UserResponse saved = UserResponse.builder().id(2L).username("newuser").baseCurrency("USD").build();
         when(userService.createUser(any(UserDTO.class))).thenReturn(saved);
 
-        mockMvc.perform(post("/api/v1/user/create")
+        mockMvc.perform(post("/api/v1/users/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(input)))
-                .andExpect(status().isOk())
+            .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(2))
                 .andExpect(jsonPath("$.username").value("newuser"));
     }
 
-    // ── PUT /modify/{id} ──────────────────────────────────────────────────────
+        // ── PUT /me ───────────────────────────────────────────────────────────────
 
     @Test
     @WithMockUser
     void modifyUser_existingId_returns200() throws Exception {
         UserDTO input = UserDTO.builder().username("modified").password("newpass").baseCurrency("EUR").build();
+        when(securityUtils.getAuthenticatedUserId()).thenReturn(1L);
         when(userService.modifyUser(eq(1L), any(UserDTO.class)))
                 .thenReturn(UserResponse.builder().id(1L).username("modified").build());
 
-        mockMvc.perform(put("/api/v1/user/modify/1")
+        mockMvc.perform(put("/api/v1/users/me")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(input)))
                 .andExpect(status().isOk())
-                .andExpect(content().string("User modified"));
+            .andExpect(jsonPath("$.id").value(1))
+            .andExpect(jsonPath("$.username").value("modified"));
     }
 
-    // ── DELETE /delete/{id} ───────────────────────────────────────────────────
+        // ── DELETE /me ────────────────────────────────────────────────────────────
 
     @Test
     @WithMockUser
     void deleteUser_existingId_returns204() throws Exception {
+        when(securityUtils.getAuthenticatedUserId()).thenReturn(1L);
         doNothing().when(userService).deleteUser(1L);
 
-        mockMvc.perform(delete("/api/v1/user/delete/1"))
+        mockMvc.perform(delete("/api/v1/users/me"))
                 .andExpect(status().isNoContent());
     }
 
     @Test
     @WithMockUser
     void deleteUser_nonExistingId_returns404() throws Exception {
+        when(securityUtils.getAuthenticatedUserId()).thenReturn(99L);
         doThrow(new NotFoundException("not found")).when(userService).deleteUser(99L);
 
-        mockMvc.perform(delete("/api/v1/user/delete/99"))
-                .andExpect(status().isNotFound());
+        mockMvc.perform(delete("/api/v1/users/me"))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.message").value("not found"));
     }
 }

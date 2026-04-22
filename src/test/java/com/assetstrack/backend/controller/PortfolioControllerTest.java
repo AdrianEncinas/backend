@@ -1,12 +1,12 @@
 package com.assetstrack.backend.controller;
 
 import com.assetstrack.backend.config.JwtUtil;
+import com.assetstrack.backend.config.SecurityUtils;
 import com.assetstrack.backend.config.UserDetailsServiceImpl;
 import com.assetstrack.backend.model.dto.ManualUpdateDTO;
 import com.assetstrack.backend.model.dto.PortfolioPointDTO;
 import com.assetstrack.backend.model.dto.StockFullDTO;
 import com.assetstrack.backend.model.dto.StockPositionDTO;
-import com.assetstrack.backend.service.IPortfolioApiService;
 import com.assetstrack.backend.service.PortfolioApiService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -41,23 +41,27 @@ class PortfolioControllerTest {
     @MockitoBean
     private UserDetailsServiceImpl userDetailsService;
 
+        @MockitoBean
+        private SecurityUtils securityUtils;
+
     @Autowired
     private ObjectMapper objectMapper;
 
-    // ── GET /dashboard/{id} ───────────────────────────────────────────────────
+        // ── GET /dashboard ────────────────────────────────────────────────────────
 
     @Test
     @WithMockUser
     void getDashboard_returnsPortfolioMap() throws Exception {
         Map<String, Object> dashboard = Map.of("totalValue", 5000.0, "holdings", List.of());
+                when(securityUtils.getAuthenticatedUserId()).thenReturn(1L);
         when(portfolioApiService.getPortfolioStatus(1L)).thenReturn(dashboard);
 
-        mockMvc.perform(get("/api/v1/portfolio/dashboard/1"))
+                mockMvc.perform(get("/api/v1/portfolio/dashboard"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalValue").value(5000.0));
     }
 
-    // ── GET /stock/{ticker} ───────────────────────────────────────────────────
+        // ── GET /stocks/{ticker} ──────────────────────────────────────────────────
 
     @Test
     @WithMockUser
@@ -68,42 +72,44 @@ class PortfolioControllerTest {
                 null, null, null, null, null);
         when(portfolioApiService.getFullStockDetails("AAPL")).thenReturn(stock);
 
-        mockMvc.perform(get("/api/v1/portfolio/stock/AAPL"))
+                mockMvc.perform(get("/api/v1/portfolio/stocks/AAPL"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.ticker").value("AAPL"))
                 .andExpect(jsonPath("$.longName").value("Apple Inc."));
     }
 
-    // ── POST /add ─────────────────────────────────────────────────────────────
+        // ── POST /positions ───────────────────────────────────────────────────────
 
     @Test
     @WithMockUser
-    void addPosition_validBody_returns200() throws Exception {
+    void addPosition_validBody_returns201() throws Exception {
         StockPositionDTO position = new StockPositionDTO(
                 "AAPL", "Apple Inc.", new BigDecimal("10"), new BigDecimal("150.00"), 1L);
         when(portfolioApiService.addPosition(any(), eq(1L))).thenReturn("Position added");
+        when(securityUtils.getAuthenticatedUserId()).thenReturn(1L);
 
-        mockMvc.perform(post("/api/v1/portfolio/add")
+        mockMvc.perform(post("/api/v1/portfolio/positions")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(position)))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(content().string("Position added"));
     }
 
     @Test
     @WithMockUser
-    void addPosition_missingUserId_returns400() throws Exception {
+    void addPosition_missingUserId_stillUsesAuthenticatedUser_returns201() throws Exception {
         StockPositionDTO position = new StockPositionDTO(
                 "AAPL", "Apple Inc.", new BigDecimal("10"), new BigDecimal("150.00"), null);
+        when(securityUtils.getAuthenticatedUserId()).thenReturn(1L);
+        when(portfolioApiService.addPosition(any(), eq(1L))).thenReturn("Position added");
 
-        mockMvc.perform(post("/api/v1/portfolio/add")
+        mockMvc.perform(post("/api/v1/portfolio/positions")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(position)))
-                .andExpect(status().isBadRequest())
-                .andExpect(content().string("userid es requerido"));
+                .andExpect(status().isCreated());
     }
 
-    // ── PUT /modify ───────────────────────────────────────────────────────────
+    // ── PUT /positions ────────────────────────────────────────────────────────
 
     @Test
     @WithMockUser
@@ -111,8 +117,9 @@ class PortfolioControllerTest {
         StockPositionDTO position = new StockPositionDTO(
                 "AAPL", "Apple Inc.", new BigDecimal("20"), new BigDecimal("155.00"), 1L);
         when(portfolioApiService.modifyPosition(any(), eq(1L))).thenReturn("The position has been modified.");
+        when(securityUtils.getAuthenticatedUserId()).thenReturn(1L);
 
-        mockMvc.perform(put("/api/v1/portfolio/modify")
+        mockMvc.perform(put("/api/v1/portfolio/positions")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(position)))
                 .andExpect(status().isOk())
@@ -121,70 +128,66 @@ class PortfolioControllerTest {
 
     @Test
     @WithMockUser
-    void modifyPosition_missingUserId_returns400() throws Exception {
+    void modifyPosition_missingUserId_stillUsesAuthenticatedUser_returns200() throws Exception {
         StockPositionDTO position = new StockPositionDTO(
                 "AAPL", "Apple Inc.", new BigDecimal("20"), new BigDecimal("155.00"), null);
+        when(securityUtils.getAuthenticatedUserId()).thenReturn(1L);
+        when(portfolioApiService.modifyPosition(any(), eq(1L))).thenReturn("The position has been modified.");
 
-        mockMvc.perform(put("/api/v1/portfolio/modify")
+        mockMvc.perform(put("/api/v1/portfolio/positions")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(position)))
-                .andExpect(status().isBadRequest())
-                .andExpect(content().string("userid es requerido"));
+                .andExpect(status().isOk());
     }
 
-    // ── DELETE /delete ────────────────────────────────────────────────────────
+    // ── DELETE /positions/{ticker} ────────────────────────────────────────────
 
     @Test
     @WithMockUser
-    void deletePosition_validBody_returns200() throws Exception {
-        StockPositionDTO position = new StockPositionDTO(
-                "AAPL", "Apple Inc.", BigDecimal.ZERO, BigDecimal.ZERO, 1L);
-        when(portfolioApiService.deletePosition(any(), eq(1L))).thenReturn("The position has been deleted.");
+    void deletePosition_validTicker_returns200() throws Exception {
+        when(portfolioApiService.deletePosition(eq("AAPL"), eq(1L))).thenReturn("The position has been deleted.");
+        when(securityUtils.getAuthenticatedUserId()).thenReturn(1L);
 
-        mockMvc.perform(delete("/api/v1/portfolio/delete")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(position)))
+        mockMvc.perform(delete("/api/v1/portfolio/positions/AAPL"))
                 .andExpect(status().isOk())
                 .andExpect(content().string("The position has been deleted."));
     }
 
     @Test
     @WithMockUser
-    void deletePosition_missingUserId_returns400() throws Exception {
-        StockPositionDTO position = new StockPositionDTO(
-                "AAPL", "Apple Inc.", BigDecimal.ZERO, BigDecimal.ZERO, null);
+    void deletePosition_withoutAuthUser_returns500IfSecurityUtilsFails() throws Exception {
+        when(securityUtils.getAuthenticatedUserId()).thenThrow(new RuntimeException("No auth user"));
 
-        mockMvc.perform(delete("/api/v1/portfolio/delete")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(position)))
-                .andExpect(status().isBadRequest());
+        mockMvc.perform(delete("/api/v1/portfolio/positions/AAPL"))
+                .andExpect(status().isInternalServerError());
     }
 
-    // ── PUT /holdings/{id}/manual-update ─────────────────────────────────────
+    // ── PATCH /holdings/{id} ──────────────────────────────────────────────────
 
     @Test
     @WithMockUser
-    void manualUpdate_validRequest_returnsEntity() throws Exception {
+        void manualUpdate_validRequest_returnsNoContent() throws Exception {
         ManualUpdateDTO dto = new ManualUpdateDTO(new BigDecimal("25"), new BigDecimal("160.00"));
-        when(portfolioApiService.syncHoldingManually(eq(10L), any(), any())).thenReturn(null);
+                when(securityUtils.getAuthenticatedUserId()).thenReturn(1L);
+                when(portfolioApiService.syncHoldingManually(eq(10L), eq(1L), any(), any())).thenReturn(null);
 
-        mockMvc.perform(put("/api/v1/portfolio/holdings/10/manual-update")
+                mockMvc.perform(patch("/api/v1/portfolio/holdings/10")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
-                .andExpect(status().isOk())
-                .andExpect(content().string("entity"));
+                                .andExpect(status().isNoContent());
     }
 
-    // ── GET /{id}/graph ───────────────────────────────────────────────────────
+        // ── GET /graph ─────────────────────────────────────────────────────────────
 
     @Test
     @WithMockUser
     void getGraph_historicMode_returnsHistoricData() throws Exception {
         PortfolioPointDTO point = new PortfolioPointDTO(
                 "2024-01-01", new BigDecimal("5000"), new BigDecimal("4000"));
+        when(securityUtils.getAuthenticatedUserId()).thenReturn(1L);
         when(portfolioApiService.getPortfolioHistory(1L)).thenReturn(List.of(point));
 
-        mockMvc.perform(get("/api/v1/portfolio/1/graph")
+        mockMvc.perform(get("/api/v1/portfolio/graph")
                         .param("mode", "historic"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].label").value("2024-01-01"));
@@ -195,9 +198,10 @@ class PortfolioControllerTest {
     void getGraph_intradayMode_returnsIntradayData() throws Exception {
         PortfolioPointDTO point = new PortfolioPointDTO(
                 "10:30", new BigDecimal("5100"), new BigDecimal("4000"));
+        when(securityUtils.getAuthenticatedUserId()).thenReturn(1L);
         when(portfolioApiService.getTodayIntraday(eq(1L), eq("1d"))).thenReturn(List.of(point));
 
-        mockMvc.perform(get("/api/v1/portfolio/1/graph")
+        mockMvc.perform(get("/api/v1/portfolio/graph")
                         .param("mode", "intraday")
                         .param("period", "1d"))
                 .andExpect(status().isOk())
