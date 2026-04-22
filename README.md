@@ -78,6 +78,42 @@ El `userId` **nunca** es enviado por el cliente — siempre se extrae del token 
 .\mvnw spring-boot:run
 ```
 
+## Docker
+
+### Levantar backend + PostgreSQL con Docker Compose
+
+```powershell
+docker compose up --build -d
+```
+
+### Ver logs del backend
+
+```powershell
+docker compose logs -f backend
+```
+
+### Parar servicios
+
+```powershell
+docker compose down
+```
+
+Swagger quedará disponible en:
+
+```
+http://localhost:8080/swagger-ui/
+```
+
+## Buenas prácticas de configuración
+
+- No hardcodear credenciales: `application.properties` usa variables de entorno.
+- En producción define un `JWT_SECRET` fuerte (largo, aleatorio y privado).
+- Ajusta `SPRING_JPA_HIBERNATE_DDL_AUTO` (idealmente `validate` en producción).
+- Mantén `SPRING_JPA_SHOW_SQL=false` en producción.
+- Habilita Azure passwordless solo en entornos Azure:
+	- `AZURE_MANAGED_IDENTITY_ENABLED=true`
+	- `SPRING_DATASOURCE_AZURE_PASSWORDLESS_ENABLED=true`
+
 ## Variables de entorno
 
 | Variable | Default | Descripción |
