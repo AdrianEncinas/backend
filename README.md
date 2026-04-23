@@ -14,13 +14,21 @@ Backend REST en Java (Spring Boot) para gestionar usuarios y portafolios, y cons
 | **PostgreSQL** | 42.7.2 | Base de datos relacional |
 | **Spring Cloud Azure** | 7.0.0 | Conector JDBC PostgreSQL sin contraseña (passwordless) |
 | **Spring WebFlux / WebClient** | - | Comunicación reactiva con el servicio Python |
+| **springdoc-openapi** | 2.7.0 | Documentación Swagger UI / OpenAPI 3 |
 | **Lombok** | - | Reducción de boilerplate (getters, builders, etc.) |
 | **Bean Validation (Jakarta)** | - | Validación de DTOs en los endpoints |
+| **Spring DevTools** | - | Recarga automática en desarrollo |
 
 ## Base URL
 
 ```
 http://localhost:8080/api/v1
+```
+
+## Documentación interactiva (Swagger UI)
+
+```
+http://localhost:8080/swagger-ui.html
 ```
 
 ## Endpoints
@@ -65,6 +73,26 @@ Todos los endpoints (excepto `/login` y `/register`) requieren un token JWT en l
 Authorization: Bearer <token>
 ```
 El `userId` **nunca** es enviado por el cliente — siempre se extrae del token en el servidor.
+
+## Variables de entorno
+
+| Variable | Valor por defecto | Descripción |
+|---|---|---|
+| `SERVER_PORT` | `8080` | Puerto del servidor |
+| `SPRING_DATASOURCE_URL` | `jdbc:postgresql://localhost:5432/investdb` | URL de conexión a PostgreSQL |
+| `SPRING_DATASOURCE_USERNAME` | `postgres` | Usuario de la base de datos |
+| `SPRING_DATASOURCE_PASSWORD` | `postgres` | Contraseña de la base de datos |
+| `AZURE_MANAGED_IDENTITY_ENABLED` | `false` | Habilitar identidad gestionada de Azure |
+| `SPRING_DATASOURCE_AZURE_PASSWORDLESS_ENABLED` | `false` | Conexión sin contraseña (solo entornos Azure) |
+| `SPRING_JPA_HIBERNATE_DDL_AUTO` | `update` | Estrategia DDL de Hibernate |
+| `SPRING_JPA_SHOW_SQL` | `false` | Mostrar SQL generado en consola |
+| `SPRING_SQL_INIT_MODE` | `never` | Modo de inicialización SQL (`never` / `always`) |
+| `JWT_SECRET` | *(valor de desarrollo)* | Clave secreta para firmar JWT — **cambiar en producción** |
+| `JWT_EXPIRATION` | `86400000` | Expiración del token en ms (24 h) |
+| `DB_POOL_MAX_SIZE` | `10` | Tamaño máximo del pool HikariCP |
+| `DB_POOL_MIN_IDLE` | `2` | Conexiones mínimas inactivas |
+| `LOG_LEVEL_ROOT` | `INFO` | Nivel de log raíz |
+| `SPRINGDOC_SWAGGER_UI_PATH` | `/swagger-ui.html` | Ruta de la UI de Swagger |
 
 ## Requisitos
 
