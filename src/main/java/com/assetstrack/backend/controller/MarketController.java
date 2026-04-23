@@ -12,19 +12,18 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.assetstrack.backend.config.SecurityUtils;
+import com.assetstrack.backend.model.dto.TickerSearchDTO;
+import com.assetstrack.backend.model.dto.WatchlistAddRequest;
+import com.assetstrack.backend.model.dto.WatchlistDTO;
+import com.assetstrack.backend.service.MarketService;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-
-import com.assetstrack.backend.model.dto.TickerSearchDTO;
-import com.assetstrack.backend.model.dto.WatchlistAddRequest;
-import com.assetstrack.backend.model.dto.WatchlistDTO;
-import com.assetstrack.backend.config.SecurityUtils;
-import com.assetstrack.backend.service.MarketService;
 
 
 
