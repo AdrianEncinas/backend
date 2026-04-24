@@ -41,6 +41,8 @@ public class UserService implements IUserService{
 
     @Override
     public UserResponse getUser(Long id){
+        
+
         return userRepo.findById(id).map(Mapper::toResponse)
             .orElseThrow(() -> new NotFoundException("User not found with id: " + id));
     }
@@ -89,7 +91,6 @@ public class UserService implements IUserService{
         authenticationManager.authenticate(
             new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword())
         );
-
         String token = jwtUtil.generateToken(loginRequest.getUsername());
 
         Map<String, String> response = new HashMap<>();
