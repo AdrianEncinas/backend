@@ -1,38 +1,35 @@
-HELP.md
-target/
-.mvn/wrapper/maven-wrapper.jar
-!**/src/main/**/target/
-!**/src/test/**/target/
+# ===== Backend (Java / Maven) =====
+backend/target/
+backend/*.class
+backend/.mvn/wrapper/maven-wrapper.jar
+backend/.env
 
-### STS ###
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
+# ===== Frontend (Angular / Node) =====
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+frontend/tmp/
+frontend/out-tsc/
+frontend/.env
 
-### IntelliJ IDEA ###
-.idea
-*.iws
-*.iml
-*.ipr
+# ===== Python =====
+python/__pycache__/
+python/*.pyc
+python/*.pyo
+python/.venv/
+python/venv/
+python/.env
 
-### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
-
-### VS Code ###
+# ===== IDEs =====
+.idea/
 .vscode/
+*.iml
+*.iws
 
-### Local env ###
+# ===== OS =====
+.DS_Store
+Thumbs.db
+
+# ===== Environment / secrets =====
 .env
-.env.*
-!.env.example
+*.env.local

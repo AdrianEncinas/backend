@@ -1,0 +1,144 @@
+.profile-page {
+	padding: 28px 32px;
+	display: flex;
+	flex-direction: column;
+	gap: 24px;
+}
+
+.page-head h1 {
+	font-size: 24px;
+	font-weight: 700;
+	letter-spacing: -0.02em;
+}
+
+.page-head p,
+.section-head p,
+.identity-card p,
+.confirm-copy,
+.loading-state {
+	color: var(--text-muted);
+}
+
+.loading-state {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+.error-banner {
+	color: var(--negative);
+	background: rgba(239, 68, 68, 0.08);
+	border: 1px solid rgba(239, 68, 68, 0.16);
+	border-radius: var(--radius-md);
+	padding: 12px 14px;
+}
+
+.profile-grid {
+	display: grid;
+	grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+	gap: 18px;
+}
+
+.identity-card,
+.form-card,
+.danger-card {
+	min-height: 100%;
+}
+
+.identity-card {
+	display: flex;
+	align-items: center;
+	gap: 18px;
+	background: radial-gradient(circle at top left, rgba(99, 102, 241, 0.22), transparent 40%), linear-gradient(180deg, rgba(36, 52, 80, 0.55), rgba(30, 41, 59, 1));
+
+	h2 {
+		font-size: 24px;
+		font-weight: 800;
+		letter-spacing: -0.03em;
+	}
+}
+
+.identity-pill {
+	width: 64px;
+	height: 64px;
+	border-radius: 20px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: rgba(99, 102, 241, 0.18);
+	color: #c7d2fe;
+	font-size: 28px;
+	font-weight: 800;
+	flex-shrink: 0;
+}
+
+.section-head {
+	margin-bottom: 18px;
+
+	h3 {
+		font-size: 16px;
+		font-weight: 700;
+		margin-bottom: 4px;
+	}
+}
+
+.form-stack {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+}
+
+.form-row {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 14px;
+}
+
+.actions-row {
+	display: flex;
+	justify-content: flex-end;
+	margin-top: 18px;
+}
+
+.danger-card {
+	grid-column: 1 / -1;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	border-color: rgba(239, 68, 68, 0.18);
+}
+
+@media (max-width: 900px) {
+	.profile-grid {
+		grid-template-columns: 1fr;
+	}
+
+	.danger-card {
+		flex-direction: column;
+		align-items: flex-start;
+	}
+}
+
+@media (max-width: 768px) {
+	.profile-page {
+		padding: 20px 16px 28px;
+	}
+
+	.identity-card {
+		align-items: flex-start;
+		flex-direction: column;
+	}
+
+	.form-row {
+		grid-template-columns: 1fr;
+	}
+
+	.actions-row {
+		justify-content: stretch;
+
+		.btn {
+			width: 100%;
+		}
+	}
+}

@@ -1,0 +1,68 @@
+<div class="watchlist-page">
+  <div class="page-head">
+    <div>
+      <h1>Watchlist</h1>
+      <p>Gestiona los activos que estas siguiendo</p>
+    </div>
+    <button class="btn btn-primary" (click)="openAdd()">Agregar activo</button>
+  </div>
+
+  <div *ngIf="loading" class="loading-state">
+    <div class="spinner" style="width:24px;height:24px;border-width:3px"></div>
+    <span>Cargando watchlist...</span>
+  </div>
+
+  <div *ngIf="!loading && items.length === 0" class="empty-state">
+    <h3>Sin elementos</h3>
+    <p>Anade tickers para construir tu lista de seguimiento.</p>
+  </div>
+
+  <div class="watchlist-grid" *ngIf="!loading && items.length > 0">
+    <div class="card watch-card" *ngFor="let item of items">
+      <div class="watch-header">
+        <div>
+          <div class="watch-ticker">{{ item.ticker }}</div>
+          <div class="watch-name">{{ item.companyName }}</div>
+        </div>
+        <button class="icon-btn danger" (click)="remove(item)" [disabled]="deleteLoading[item.id]">
+          <span *ngIf="!deleteLoading[item.id]">Eliminar</span>
+          <span *ngIf="deleteLoading[item.id]">...</span>
+        </button>
+      </div>
+      <div class="watch-meta">Agregado: {{ item.id }}</div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" *ngIf="showAddModal">
+    <div class="modal compact-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div>
+          <h3>Agregar a watchlist</h3>
+          <p>Introduce ticker y nombre del activo</p>
+        </div>
+        <button class="icon-btn" (click)="showAddModal = false">Cerrar</button>
+      </div>
+
+      <div class="form-group">
+        <label>Ticker</label>
+        <input type="text" [(ngModel)]="addTicker" placeholder="AAPL" />
+      </div>
+
+      <div class="form-group">
+        <label>Nombre</label>
+        <input type="text" [(ngModel)]="addName" placeholder="Apple Inc." />
+      </div>
+
+      <div class="alert error" *ngIf="addError">{{ addError }}</div>
+
+      <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="showAddModal = false">Cancelar</button>
+        <button class="btn btn-primary" (click)="submitAdd()" [disabled]="addLoading">
+          {{ addLoading ? 'Agregando...' : 'Guardar' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" *ngIf="toast" [class.toast-success]="toastType === 'success'" [class.toast-error]="toastType === 'error'">{{ toast }}</div>
+</div>

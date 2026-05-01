@@ -1,0 +1,113 @@
+<div *ngIf="stock" class="stock-detail">
+  <div class="card stock-header-card">
+    <div class="stock-header-left">
+      <img *ngIf="stock.logoUrl" [src]="stock.logoUrl" class="stock-logo" alt="" />
+      <div *ngIf="!stock.logoUrl" class="stock-logo-placeholder">{{ stock.ticker[0] }}</div>
+      <div>
+        <div class="stock-ticker">{{ stock.ticker }}</div>
+        <div class="stock-long-name">{{ stock.longName }}</div>
+      </div>
+    </div>
+    <div class="stock-header-right">
+      <span class="stock-price">${{ fmt(stock.currentPrice) }}</span>
+      <span class="badge" [class.badge-positive]="(changePct ?? 0) >= 0" [class.badge-negative]="(changePct ?? 0) < 0">
+        {{ (changePct ?? 0) >= 0 ? '+' : '' }}{{ pct(changePct) }}
+      </span>
+    </div>
+  </div>
+
+  <div class="card chart-card">
+    <div class="chart-header">
+      <span class="section-title">Grafico de precio</span>
+      <div class="period-btns">
+        <button
+          *ngFor="let p of chartPeriods"
+          class="period-btn"
+          [class.active]="selectedChartPeriod === p.value"
+          (click)="selectChartPeriod(p.value)">
+          {{ p.label }}
+        </button>
+      </div>
+    </div>
+    <div class="chart-wrap">
+      <div *ngIf="chartLoading" class="chart-loading">
+        <div class="spinner"></div>
+      </div>
+      <canvas #stockChart height="220"></canvas>
+    </div>
+  </div>
+
+  <div class="metrics-grid">
+    <div class="card">
+      <h4 class="card-title">Valoracion</h4>
+      <div class="metric-list">
+        <div class="metric-row"><span>PER</span><span>{{ fmt(stock.fundamentals.peRatio) }}</span></div>
+        <div class="metric-row"><span>PER Futuro</span><span>{{ fmt(stock.fundamentals.forwardPE) }}</span></div>
+        <div class="metric-row"><span>PEG</span><span>{{ fmt(stock.fundamentals.pegRatio) }}</span></div>
+        <div class="metric-row"><span>EV/EBITDA</span><span>{{ fmt(stock.fundamentals.enterpriseToEbitda) }}</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h4 class="card-title">Rentabilidad</h4>
+      <div class="metric-list">
+        <div class="metric-row"><span>Margen Bruto</span><span>{{ pct(stock.metrics.profitability.grossMargins) }}</span></div>
+        <div class="metric-row"><span>Margen Operativo</span><span>{{ pct(stock.metrics.profitability.operatingMargins) }}</span></div>
+        <div class="metric-row"><span>ROE</span><span>{{ pct(stock.metrics.profitability.returnOnEquity) }}</span></div>
+        <div class="metric-row"><span>ROA</span><span>{{ pct(stock.metrics.profitability.returnOnAssets) }}</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h4 class="card-title">Solvencia</h4>
+      <div class="metric-list">
+        <div class="metric-row"><span>Deuda/Capital</span><span>{{ fmt(stock.solvency.debtToEquity) }}</span></div>
+        <div class="metric-row"><span>Ratio Corriente</span><span>{{ fmt(stock.solvency.currentRatio) }}</span></div>
+        <div class="metric-row"><span>Caja Total</span><span>{{ fmtBig(stock.solvency.totalCash) }}</span></div>
+        <div class="metric-row"><span>Deuda Total</span><span>{{ fmtBig(stock.solvency.totalDebt) }}</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h4 class="card-title">Analistas</h4>
+      <div class="metric-list">
+        <div class="metric-row">
+          <span>Recomendacion</span>
+          <span [class]="getRecoClass(stock.analysts.recommendation)">{{ stock.analysts.recommendation || 'N/D' }}</span>
+        </div>
+        <div class="metric-row"><span>N analistas</span><span>{{ stock.analysts.numberOfAnalysts || 'N/D' }}</span></div>
+        <div class="metric-row"><span>Precio objetivo</span><span>${{ fmt(stock.analysts.targetPrice.mean) }}</span></div>
+        <div class="metric-row">
+          <span>Potencial</span>
+          <span [class.positive]="stock.analysts.upsidePotentialPct >= 0" [class.negative]="stock.analysts.upsidePotentialPct < 0">
+            {{ potentialPct(stock.analysts.upsidePotentialPct) }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" *ngIf="stock.dividends.yield">
+      <h4 class="card-title">Dividendos</h4>
+      <div class="metric-list">
+        <div class="metric-row"><span>Yield</span><span class="positive">{{ pct(stock.dividends.yield) }}</span></div>
+        <div class="metric-row"><span>Payout Ratio</span><span>{{ pct(stock.dividends.payoutRatio) }}</span></div>
+        <div class="metric-row"><span>Ultimo Div.</span><span>${{ fmt(stock.dividends.lastDividend, 3) }}</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h4 class="card-title">Crecimiento</h4>
+      <div class="metric-list">
+        <div class="metric-row"><span>Ingresos</span><span [class.positive]="stock.metrics.growth.revenueGrowth >= 0">{{ pct(stock.metrics.growth.revenueGrowth) }}</span></div>
+        <div class="metric-row"><span>Beneficios</span><span [class.positive]="stock.metrics.growth.earningsGrowth >= 0">{{ pct(stock.metrics.growth.earningsGrowth) }}</span></div>
+        <div class="metric-row"><span>FCF</span><span>{{ fmtBig(stock.metrics.growth.freeCashflow) }}</span></div>
+        <div class="metric-row"><span>Cash Op.</span><span>{{ fmtBig(stock.metrics.growth.operatingCashflow) }}</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" *ngIf="stock.businessSummary">
+    <h4 class="card-title">Descripcion</h4>
+    <p class="summary-text">{{ stock.businessSummary }}</p>
+  </div>
+</div>

@@ -1,0 +1,96 @@
+.app-shell {
+	min-height: 100vh;
+	position: relative;
+
+	.mobile-topbar,
+	.nav-backdrop {
+		display: none;
+	}
+
+	&.has-nav {
+		display: flex;
+
+		.main-content {
+			margin-left: var(--nav-width);
+			flex: 1;
+			min-width: 0;
+		}
+	}
+}
+
+.mobile-topbar {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: 60px;
+	padding: 0 14px;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	background: rgba(15, 23, 42, 0.92);
+	border-bottom: 1px solid var(--border);
+	backdrop-filter: blur(8px);
+	z-index: 120;
+}
+
+.mobile-menu-btn {
+	width: 40px;
+	height: 40px;
+	display: inline-flex;
+	flex-direction: column;
+	justify-content: center;
+	gap: 5px;
+	border: 1px solid var(--border);
+	border-radius: 10px;
+	background: var(--bg-card);
+	padding: 0 10px;
+
+	span {
+		height: 2px;
+		width: 100%;
+		background: var(--text-primary);
+		border-radius: 99px;
+	}
+}
+
+.mobile-brand {
+	font-size: 15px;
+	font-weight: 700;
+	letter-spacing: -0.01em;
+}
+
+.nav-backdrop {
+	position: fixed;
+	inset: 0;
+	background: rgba(2, 6, 23, 0.55);
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 0.2s ease;
+	z-index: 105;
+
+	&.visible {
+		opacity: 1;
+		pointer-events: auto;
+	}
+}
+
+@media (max-width: 960px) {
+	.app-shell {
+		&.has-nav {
+			.main-content {
+				margin-left: 0;
+				padding-top: 60px;
+			}
+		}
+
+		.mobile-topbar,
+		.nav-backdrop {
+			display: flex;
+		}
+
+		.nav-backdrop {
+			display: block;
+		}
+	}
+}

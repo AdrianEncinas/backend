@@ -1,0 +1,95 @@
+<div class="profile-page">
+	<div class="page-head">
+		<div>
+			<h1>Perfil</h1>
+			<p>Administra tus credenciales y preferencias de cuenta</p>
+		</div>
+	</div>
+
+	<div *ngIf="loading" class="loading-state">
+		<div class="spinner" style="width: 24px; height: 24px; border-width: 3px"></div>
+		<span>Cargando perfil...</span>
+	</div>
+
+	<div *ngIf="error && !loading" class="error-banner">{{ error }}</div>
+
+	<div *ngIf="user && !loading" class="profile-grid">
+		<section class="card identity-card">
+			<div class="identity-pill">{{ user.username[0] | uppercase }}</div>
+			<div>
+				<h2>{{ user.username }}</h2>
+				<p>Usuario activo | Divisa base {{ user.baseCurrency }}</p>
+			</div>
+		</section>
+
+		<section class="card form-card">
+			<div class="section-head">
+				<h3>Editar perfil</h3>
+				<p>El backend requiere enviar una nueva contrasena para aplicar cambios.</p>
+			</div>
+
+			<div class="form-stack">
+				<div class="form-group">
+					<label>Usuario</label>
+					<input type="text" [(ngModel)]="form.username" />
+				</div>
+
+				<div class="form-row">
+					<div class="form-group">
+						<label>Nueva contrasena</label>
+						<input type="password" [(ngModel)]="form.password" placeholder="********" />
+					</div>
+
+					<div class="form-group">
+						<label>Confirmar contrasena</label>
+						<input type="password" [(ngModel)]="form.confirmPassword" placeholder="********" />
+					</div>
+				</div>
+
+				<div class="form-group">
+					<label>Divisa base</label>
+					<select [(ngModel)]="form.baseCurrency">
+						<option *ngFor="let currency of currencies" [value]="currency">{{ currency }}</option>
+					</select>
+				</div>
+			</div>
+
+			<div class="actions-row">
+				<button class="btn btn-primary" (click)="save()" [disabled]="saving">
+					{{ saving ? 'Guardando...' : 'Guardar cambios' }}
+				</button>
+			</div>
+		</section>
+
+		<section class="card danger-card">
+			<div class="section-head">
+				<h3>Zona de riesgo</h3>
+				<p>Eliminar tu cuenta borra el acceso definitivamente.</p>
+			</div>
+
+			<button class="btn btn-danger" (click)="showDeleteConfirm = true">Eliminar cuenta</button>
+		</section>
+	</div>
+
+	<div class="modal-overlay" *ngIf="showDeleteConfirm" (click)="showDeleteConfirm = false">
+		<div class="modal" (click)="$event.stopPropagation()">
+			<div class="modal-header">
+				<h3>Eliminar cuenta</h3>
+				<button class="modal-close" (click)="showDeleteConfirm = false">x</button>
+			</div>
+			<div class="modal-body">
+				<p class="confirm-copy">Esta accion no se puede deshacer. Se eliminara tu cuenta y tu acceso actual.</p>
+			</div>
+			<div class="modal-footer">
+				<button class="btn btn-ghost" (click)="showDeleteConfirm = false">Cancelar</button>
+				<button class="btn btn-danger" (click)="deleteAccount()" [disabled]="deleting">
+					{{ deleting ? 'Eliminando...' : 'Confirmar' }}
+				</button>
+			</div>
+		</div>
+	</div>
+
+	<div *ngIf="toast" class="toast" [class.toast-success]="toastType === 'success'" [class.toast-error]="toastType === 'error'">
+		{{ toast }}
+	</div>
+</div>

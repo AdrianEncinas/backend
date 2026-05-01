@@ -1,0 +1,17 @@
+<div class="app-shell" [class.has-nav]="showNav" [class.nav-open]="mobileNavOpen">
+	<header class="mobile-topbar" *ngIf="showNav">
+		<button class="mobile-menu-btn" type="button" (click)="toggleMobileNav()" aria-label="Abrir menu">
+			<span></span>
+			<span></span>
+			<span></span>
+		</button>
+		<span class="mobile-brand">AssetTrack</span>
+	</header>
+
+	<div class="nav-backdrop" *ngIf="showNav" [class.visible]="mobileNavOpen" (click)="closeMobileNav()"></div>
+
+	<app-nav *ngIf="showNav" [mobileOpen]="mobileNavOpen" (navigate)="closeMobileNav()"></app-nav>
+	<main class="main-content">
+		<router-outlet />
+	</main>
+</div>

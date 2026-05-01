@@ -1,0 +1,43 @@
+<nav class="sidebar" [class.mobile-open]="mobileOpen">
+	<!-- Logo -->
+	<div class="sidebar-brand" [routerLink]="['/dashboard']" (click)="onNavigate()">
+		<div class="brand-icon">
+			<svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+				<path d="M7 17l4-8 4 8" stroke="#6366F1" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+				<path d="M8.5 14h7" stroke="#6366F1" stroke-width="2" stroke-linecap="round"/>
+				<circle cx="19" cy="7" r="2.5" fill="#10B981"/>
+			</svg>
+		</div>
+		<span class="brand-name">AssetTrack</span>
+		<button type="button" class="close-mobile-nav" (click)="onNavigate()" aria-label="Cerrar menu">&#10005;</button>
+	</div>
+
+	<!-- Nav items -->
+	<div class="nav-section">
+		<p class="nav-label">Principal</p>
+		<a
+			*ngFor="let item of navItems"
+			class="nav-item"
+			[class.active]="isActive(item.path)"
+			(click)="onNavigate()"
+			[routerLink]="[item.path]">
+			<span class="nav-icon material-symbols-rounded">{{ item.icon }}</span>
+			<span>{{ item.label }}</span>
+		</a>
+	</div>
+
+	<!-- User + logout -->
+	<div class="sidebar-footer">
+		<div class="user-pill" *ngIf="user">
+			<div class="user-avatar">{{ user.username[0].toUpperCase() }}</div>
+			<div class="user-info">
+				<span class="user-name">{{ user.username }}</span>
+				<span class="user-currency">{{ user.baseCurrency }}</span>
+			</div>
+		</div>
+		<button class="logout-btn" (click)="logout()">
+			<span class="material-symbols-rounded">logout</span>
+			Salir
+		</button>
+	</div>
+</nav>

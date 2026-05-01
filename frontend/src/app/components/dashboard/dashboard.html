@@ -1,0 +1,324 @@
+<div class="dashboard-page">
+
+  <!-- Loading skeleton -->
+  <div *ngIf="loading" class="loading-state">
+    <div class="spinner" style="width:32px;height:32px;border-width:3px"></div>
+    <p>Cargando portfolio...</p>
+  </div>
+
+  <!-- Error state -->
+  <div *ngIf="error && !loading" class="error-banner">
+    <span>&#9888; {{ error }}</span>
+    <button class="btn btn-ghost btn-sm" (click)="loadDashboard()">Reintentar</button>
+  </div>
+
+  <ng-container *ngIf="!loading && !error">
+
+    <!-- Hero: Total Value -->
+    <div class="hero-section">
+      <div class="hero-value">
+        <span class="hero-label">Valor total del portfolio</span>
+        <span class="hero-amount">{{ formatCurrency(totalValue, currency) }}</span>
+        <div class="hero-change" [class.positive]="totalGainLoss >= 0" [class.negative]="totalGainLoss < 0">
+          <span>{{ totalGainLoss >= 0 ? '+' : '' }}{{ formatCurrency(totalGainLoss, currency) }}</span>
+          <span class="badge" [class.badge-positive]="totalGainLoss >= 0" [class.badge-negative]="totalGainLoss < 0">
+            {{ totalGainLoss >= 0 ? 'PROFIT' : 'LOSS' }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chart Card -->
+    <div class="card chart-card">
+      <div class="chart-header">
+        <div class="chart-title-wrap">
+          <span class="section-title">Rendimiento</span>
+          <div class="chart-performance" *ngIf="graphReturnAbsolute !== null && graphReturnPct !== null" [class.positive]="graphReturnAbsolute >= 0" [class.negative]="graphReturnAbsolute < 0">
+            <span>{{ graphReturnAbsolute >= 0 ? '+' : '' }}{{ formatCurrency(graphReturnAbsolute, currency) }}</span>
+            <span class="badge" [class.badge-positive]="graphReturnAbsolute >= 0" [class.badge-negative]="graphReturnAbsolute < 0">
+              {{ graphReturnAbsolute >= 0 ? '+' : '' }}{{ (graphReturnPct * 100) | number:'1.2-2' }}%
+            </span>
+          </div>
+        </div>
+        <div class="period-btns">
+          <button
+            *ngFor="let p of periods"
+            class="period-btn"
+            [class.active]="selectedPeriod === p.value"
+            (click)="selectPeriod(p)">
+            {{ p.label }}
+          </button>
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <div *ngIf="graphLoading" class="chart-loading">
+          <div class="spinner"></div>
+        </div>
+        <canvas #portfolioChart height="280"></canvas>
+      </div>
+    </div>
+
+    <!-- Holdings Section -->
+    <div class="holdings-section">
+      <div class="section-header">
+        <span class="section-title">Mis posiciones</span>
+        <button class="btn btn-primary btn-sm" (click)="openAddModal()">
+          + Anadir
+        </button>
+      </div>
+
+      <!-- Empty portfolio -->
+      <div *ngIf="!dashboard?.assets?.length" class="empty-state">
+        <div class="empty-icon">&#128202;</div>
+        <p>No tienes posiciones aun.</p>
+        <button class="btn btn-primary" (click)="openAddModal()">Anadir primera posicion</button>
+      </div>
+
+      <!-- Holdings table -->
+      <div *ngIf="dashboard?.assets?.length" class="card table-scroll" style="padding:0;overflow:hidden">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Activo</th>
+              <th class="hide-sm">Acciones</th>
+              <th>Valor</th>
+              <th>Rendimiento</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let asset of sortedAssets">
+              <td>
+                <button type="button" class="asset-name-btn" (click)="openPositionDetail(asset)">
+                  <div class="asset-name">
+                  <img *ngIf="asset.logo_url" [src]="asset.logo_url" class="asset-logo" alt="" />
+                  <div *ngIf="!asset.logo_url" class="asset-logo-placeholder">{{ asset.ticker[0] }}</div>
+                  <div>
+                    <div class="ticker">{{ asset.ticker }}</div>
+                    <div class="company hide-sm">{{ asset.company_name }}</div>
+                  </div>
+                </div>
+                </button>
+              </td>
+              <td class="hide-sm">{{ asset.shares }}</td>
+              <td>{{ formatCurrency(asset.value_user, currency) }}</td>
+              <td>
+                <span class="badge" [class.badge-positive]="asset.gain_pct >= 0" [class.badge-negative]="asset.gain_pct < 0">
+                  {{ asset.gain_pct >= 0 ? '+' : '' }}{{ asset.gain_pct | number:'1.2-2' }}%
+                </span>
+              </td>
+              <td>
+                <div class="row-actions">
+                  <button class="icon-btn" title="Editar" (click)="openEditModal(asset)">&#9998;</button>
+                  <button class="icon-btn danger" title="Eliminar" (click)="confirmDelete(asset)">&#128465;</button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </ng-container>
+
+  <!-- Add Position Modal -->
+  <div class="modal-overlay" *ngIf="showAddModal" (click)="showAddModal=false">
+    <div class="modal add-position-modal" [class.search-open]="!addSearchSelected && addSearchResults.length > 0" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Anadir posicion</h3>
+        <button class="modal-close" (click)="showAddModal=false">&#x2715;</button>
+      </div>
+      <div class="modal-body">
+        <div *ngIf="addError" class="alert alert-error">{{ addError }}</div>
+
+        <!-- Step 1: search -->
+        <div *ngIf="!addSearchSelected" class="add-search-panel">
+          <div class="add-search-panel-header">
+            <span class="add-search-kicker">Paso 1</span>
+            <h4>Buscar activo</h4>
+            <p>Escribe el ticker o nombre de empresa para seleccionar tu posicion.</p>
+          </div>
+
+          <div class="add-search-wrap">
+            <div class="add-search-box">
+              <span class="add-search-icon">&#128269;</span>
+              <input
+                type="text"
+                placeholder="AAPL, Tesla, S&P 500..."
+                [(ngModel)]="addSearchQuery"
+                (ngModelChange)="onAddSearch()"
+                name="addSearch"
+                autocomplete="off"
+              />
+              <div *ngIf="addSearching" class="spinner" style="width:14px;height:14px;border-width:2px;flex-shrink:0"></div>
+            </div>
+
+            <div class="add-search-results" *ngIf="addSearchResults.length > 0">
+              <button
+                type="button"
+                class="add-search-item"
+                *ngFor="let r of addSearchResults"
+                (click)="selectAddStock(r)">
+                <span class="add-search-symbol">{{ r.symbol }}</span>
+                <span class="add-search-name">{{ r.name }}</span>
+                <span class="add-search-action">Seleccionar</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: selected stock + form -->
+        <ng-container *ngIf="addSearchSelected">
+          <div class="add-selected-stock">
+            <div class="add-selected-info">
+              <span class="add-selected-kicker">Seleccionado</span>
+              <span class="add-selected-ticker">{{ addForm.ticker }}</span>
+              <span class="add-selected-name">{{ addForm.companyName }}</span>
+            </div>
+            <button class="btn btn-ghost btn-sm" (click)="clearAddSearch()">Cambiar</button>
+          </div>
+
+          <div *ngIf="addStockLoading" class="loading-state add-detail-loading">
+            <div class="spinner" style="width:24px;height:24px;border-width:3px"></div>
+            <p>Cargando datos...</p>
+          </div>
+
+          <div *ngIf="addStockError && !addStockLoading" class="error-msg add-detail-error">{{ addStockError }}</div>
+
+          <app-stock-details
+            *ngIf="addSelectedStock && !addStockLoading"
+            class="add-stock-detail"
+            [stock]="addSelectedStock"
+            [chartData]="addChartData"
+            [chartLoading]="addChartLoading"
+            [selectedChartPeriod]="addSelectedChartPeriod"
+            [chartPeriods]="addChartPeriods"
+            [changePct]="addChartChangePct"
+            [potentialMode]="'raw'"
+            (chartPeriodChange)="selectAddChartPeriod($event)">
+          </app-stock-details>
+
+          <div *ngIf="addSelectedStock && !addStockLoading" class="add-form-surface">
+            <div class="add-form-head">
+              <span class="add-search-kicker">Paso 2</span>
+              <h4>Configurar posicion</h4>
+            </div>
+
+            <div class="add-form-grid">
+              <div class="form-group add-form-field">
+                <label>Numero de acciones</label>
+                <input type="number" placeholder="10" [(ngModel)]="addForm.shares" name="addShares" min="0.0001" step="any" />
+              </div>
+              <div class="form-group add-form-field">
+                <label>Precio promedio ({{ currency }})</label>
+                <input type="number" placeholder="175.00" [(ngModel)]="addForm.avg_price" name="addPrice" min="0.01" step="any" />
+              </div>
+            </div>
+
+            <div class="add-form-estimate">
+              <span>Inversion estimada</span>
+              <strong>{{ (addForm.shares || 0) * (addForm.avg_price || 0) | number:'1.2-2' }} {{ currency }}</strong>
+            </div>
+          </div>
+        </ng-container>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" (click)="showAddModal=false">Cancelar</button>
+        <button class="btn btn-primary" (click)="submitAdd()" [disabled]="addLoading || !addSearchSelected || addStockLoading || !addSelectedStock">
+          <span *ngIf="addLoading" class="spinner" style="width:14px;height:14px;border-width:2px"></span>
+          {{ addLoading ? 'Guardando...' : 'Guardar' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Position Modal -->
+  <div class="modal-overlay" *ngIf="showEditModal" (click)="showEditModal=false">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Editar {{ editForm.ticker }}</h3>
+        <button class="modal-close" (click)="showEditModal=false">&#x2715;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Nombre empresa</label>
+          <input type="text" [(ngModel)]="editForm.companyName" name="editName" />
+        </div>
+        <div class="form-group">
+          <label>Numero de acciones</label>
+          <input type="number" [(ngModel)]="editForm.shares" name="editShares" min="0.0001" step="any" />
+        </div>
+        <div class="form-group">
+          <label>Precio promedio</label>
+          <input type="number" [(ngModel)]="editForm.avg_price" name="editPrice" min="0.01" step="any" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" (click)="showEditModal=false">Cancelar</button>
+        <button class="btn btn-primary" (click)="submitEdit()" [disabled]="editLoading">
+          {{ editLoading ? 'Guardando...' : 'Actualizar' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Position Detail Modal -->
+  <div class="modal-overlay" *ngIf="showPositionDetailModal" (click)="closePositionDetail()">
+    <div class="modal detail-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Detalle de {{ detailTargetAsset?.ticker }}</h3>
+        <button class="modal-close" (click)="closePositionDetail()">&#x2715;</button>
+      </div>
+      <div class="modal-body">
+        <div *ngIf="detailLoading" class="loading-state add-detail-loading">
+          <div class="spinner" style="width:24px;height:24px;border-width:3px"></div>
+          <p>Cargando datos...</p>
+        </div>
+
+        <div *ngIf="detailError && !detailLoading" class="error-msg add-detail-error">{{ detailError }}</div>
+
+        <app-stock-details
+          *ngIf="detailStock && !detailLoading"
+          [stock]="detailStock"
+          [chartData]="detailChartData"
+          [chartLoading]="detailChartLoading"
+          [selectedChartPeriod]="detailSelectedChartPeriod"
+          [chartPeriods]="detailChartPeriods"
+          [changePct]="detailChartChangePct"
+          [potentialMode]="'raw'"
+          (chartPeriodChange)="selectDetailChartPeriod($event)">
+        </app-stock-details>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" (click)="closePositionDetail()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Confirm Modal -->
+  <div class="modal-overlay" *ngIf="showDeleteConfirm" (click)="showDeleteConfirm=false">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Eliminar posicion</h3>
+        <button class="modal-close" (click)="showDeleteConfirm=false">&#x2715;</button>
+      </div>
+      <div class="modal-body">
+        <p style="color:var(--text-secondary)">
+          Seguro que quieres eliminar <strong style="color:var(--text-primary)">{{ deleteTarget?.ticker }}</strong>? Esta accion no se puede deshacer.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" (click)="showDeleteConfirm=false">Cancelar</button>
+        <button class="btn btn-danger" (click)="submitDelete()" [disabled]="deleteLoading">
+          {{ deleteLoading ? 'Eliminando...' : 'Eliminar' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div *ngIf="toast" class="toast" [class.toast-success]="toastType==='success'" [class.toast-error]="toastType==='error'">
+    {{ toast }}
+  </div>
+
+</div>
