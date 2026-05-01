@@ -1,28 +1,28 @@
 # AssetTrack
 
-Aplicaci�n web para gestionar y seguir una cartera de inversiones en acciones. Permite registrar posiciones, ver el valor del portfolio en tiempo real, consultar gr�ficos hist�ricos e intraday, y mantener una watchlist de activos de inter�s.
+Aplicación web para gestionar y seguir una cartera de inversiones en acciones. Permite registrar posiciones, ver el valor del portfolio en tiempo real, consultar gráficos históricos e intraday, y mantener una watchlist de activos de interés.
 
-## Tecnolog�as
+## Tecnologías
 
 **Backend**
 - Java 17 + Spring Boot 3
-- Spring Security con autenticaci�n JWT
+- Spring Security con autenticación JWT
 - PostgreSQL
 - Maven
 
 **Frontend**
-- Angular 17 (m�dulos)
+- Angular 17 (módulos)
 - TypeScript
 - SCSS
 
 ## Funcionalidades principales
 
-- Registro e inicio de sesi�n con JWT
-- Dashboard con valor total del portfolio y gr�fico hist�rico
-- A�adir, editar y eliminar posiciones
-- B�squeda de tickers y consulta de datos de mercado
+- Registro e inicio de sesión con JWT
+- Dashboard con valor total del portfolio y gráfico histórico
+- Añadir, editar y eliminar posiciones
+- Búsqueda de tickers y consulta de datos de mercado
 - Watchlist personalizada
-- Gr�ficos intraday e hist�ricos por acci�n
+- Gráficos intraday e históricos por acción
 
 ## Estructura
 
@@ -31,7 +31,7 @@ backend/   ? API REST (Spring Boot, puerto 8080)
 frontend/  ? SPA Angular (puerto 4200)
 ```
 
-## Arranque r�pido
+## Arranque rápido
 
 ```bash
 # Backend
