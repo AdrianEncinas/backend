@@ -72,7 +72,7 @@ npm run dev
 - Verifica las credenciales en `application.properties`:
   - URL: `jdbc:postgresql://localhost:5432/investdb`
   - Usuario: `postgres`
-  - Contraseña: `root`
+   - Contraseña: `root`
 
 ### Errores CORS
 - Verifica que `CorsConfig.java` existe en backend
