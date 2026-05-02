@@ -39,7 +39,7 @@ Aplicación web para gestionar y seguir una cartera de inversiones en acciones. 
 ```
 backend/   ? API REST (Spring Boot, puerto 8080)
 frontend/  ? SPA Angular (puerto 4200)
-python/    ? API de apoyo para mercado/históricos (FastAPI, puerto 5000)
+python/    ? API de apoyo para mercado/históricos (FastAPI, puerto 8000)
 ```
 
 ## Arranque rápido
@@ -57,7 +57,7 @@ npm start
 # Python
 cd python
 pip install fastapi uvicorn yfinance pandas numpy requests
-uvicorn test:app --host 0.0.0.0 --port 5000 --reload
+uvicorn test:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 > Requiere PostgreSQL en ejecuci�n y credenciales configuradas en `backend/src/main/resources/application.properties`.
@@ -81,3 +81,31 @@ Para detener todo:
 ```bash
 docker compose down
 ```
+
+## Ejecutar desde VS Code (con PostgreSQL)
+
+1. Levanta dependencias necesarias (PostgreSQL + Python):
+
+```bash
+docker compose up -d db python
+```
+
+2. En VS Code, abre **Run and Debug** y ejecuta la configuración:
+
+- Backend (PostgreSQL)
+
+Esta configuración ya está preparada en `.vscode/launch.json`.
+
+3. Para frontend en modo desarrollo:
+
+```bash
+cd frontend
+npm install
+npm start
+```
+
+También tienes tareas en `.vscode/tasks.json`:
+
+- Docker: Up all
+- Docker: Down all
+- Docker: Up dependencies (db + python)
